@@ -1,0 +1,2 @@
+STD sin and cos calls 10'000 * 360: 0.084477
+Custom sin and cos calls 10'000 * 360: 0.184747
