@@ -7,105 +7,146 @@
 #include <algorithm>
 #include <tuple>
 
+template<typename T> T& identify( const T& t ) { return t; }
 
-template<typename...Required>
+template<typename EntityType, typename...Required>
 class SystemBaseTemplate
 {
 	template<size_t Idx>
 	using required_type = std::tuple_element_t<Idx, std::tuple<Required...>>;
 
-
 	static constexpr auto requirement_count = std::tuple_size_v<std::tuple<Required...>>;
 public:
-	void AddEntity( Entity& _entity )
+	void AddEntity( EntityType& _entity )
 	{
-		if( !CheckRequirements<0, required_type<0>>( &_entity ) )
+		if( !HasRequirements<0, required_type<0>>( &_entity ) )
 			throw std::runtime_error( "Entity doesn't meet requirements for this system" );
 
 		entities.push_back( &_entity );
 	}
-	void RemoveEntity( const Entity& _entity )noexcept
+	
+	void RemoveEntity( const EntityType& _entity )noexcept
 	{
-		auto swap_and_pop = [ this ]( Entity& e0, Entity& e1 )
-		{
-			std::swap( e0, e1 );
-			entities.pop_back();
-		};
-
-		if( entities.empty() ) { return; }
-
-		auto findit =
-			std::find_if( entities.begin(), entities.end(),
-				[ & ]( const Entity* e ) { return &_entity == e; } );
-
-		if( findit != entities.end() )
-		{
-			if( entities.size() == 1 )
-				entities.clear();
-			else
-				swap_and_pop( **findit, *entities.back() );
-		}
+		auto iter = entities.FindVariant( _entity );
+		entities.SwapAndPop( iter );
 	}
 
 protected:
-	std::vector<Entity*> entities;
+	Collection<EntityType*> entities;
 
 private:
-	template<size_t Idx, typename T>
-	bool CheckRequirements( Entity* _entity )
-	{
+	template<size_t Idx, typename ComponentT, typename EntityT>
+	bool HasRequirements( EntityT& _entity )const noexcept
+	{	
 		constexpr auto next = Idx + 1;
 		
-		bool hasRequired = _entity->HasComponent<T>();
+		bool hasRequired = _entity.HasComponent<ComponentT>();
 		if constexpr( next < requirement_count )
 		{
 			hasRequired &=
-				CheckRequirements<next, required_type<next>>( _entity );
+				HasRequirements<next, required_type<next>>( _entity );
 		}
 
 		return hasRequired;
 	}
 };
 
-class MoveSystem : public SystemBaseTemplate<Position,Velocity>
+class MoveSystem : public SystemBaseTemplate<EntityMask, Position, Velocity>
 {
 public:
 	void Move( float _delta_time )
 	{
 		for( auto& e : entities )
 		{
-			auto& pos = e->GetComponent<Position>();
-			const auto& vel = e->GetComponent<Velocity>();
+			auto entity = e.Extract_Ptr_To<EntityMask>();
+
+			auto& pos = entity->GetComponent<Position>();
+			const auto& vel = entity->GetComponent<Velocity>();
 			pos.value += ( vel.value * _delta_time );
 		}
 	}
 };
 
-class DamageSystem : public SystemBaseTemplate<Damage, Health>
+class CollisionSystem : public SystemBaseTemplate<EntityMask, Position, Shape>
+{
+public:
+
+	template<typename WorldType>
+	void Check( WorldType& _world)
+	{
+		for( int j = 0; j < int( entities.size() ); ++j )
+		{
+			auto* ent1 = entities[ j ];
+			for( int i = j + 1; i < int( entities.size() ); ++i )
+			{
+				auto* ent2 = entities[ i ];
+				if( _world.HasSystem<DamageSystem>() )
+				{
+					const auto& dmg = _world.GetSystem<DamageSystem>();
+					
+				}
+			}
+		}
+	}
+	bool IsColliding( const Rect& _lRect, const Rect& _rRect )
+	{
+		return
+			_lRect.left <= _rRect.right && _lRect.right >= _rRect.left &&
+			_lRect.top <= _rRect.bottom && _lRect.bottom >= _rRect.top;
+	}
+	bool IsColliding( const Rect& _rect, const Circle& _circle )
+	{
+		return
+			( _rect.left - _circle.center.x ) < _circle.radius ||
+			( _rect.top - _circle.center.y ) < _circle.radius ||
+			( _rect.right - _circle.center.x ) < _circle.radius ||
+			( _rect.bottom - _circle.center.y ) < _circle.radius;
+	}
+	bool IsColliding( const Circle& _circle, const Rect& _rect )
+	{
+		return IsColliding( _rect, _circle );
+	}
+	bool IsColliding( const Circle& _lCircle, const Circle& _rCircle )
+	{
+		auto sq = []( float val ) { return val * val; };
+		const auto dx = sq( _lCircle.center.x - _rCircle.center.x );
+		const auto dy = sq( _lCircle.center.y - _rCircle.center.y );
+		const auto combRad = sq( _lCircle.radius ) + sq( _rCircle.radius );
+		return ( dx + dy ) <= combRad;
+	}
+
+private:
+};
+
+class DamageSystem : public SystemBaseTemplate<EntityMask, Damage, Health>
 {
 public:
 private:
 };
-class HealthSystem : public SystemBaseTemplate<Damage, Health>
+
+class HealthSystem : public SystemBaseTemplate<EntityMask, Damage, Health>
 {
 public:
+
 private:
 };
-class DrawSystem : public SystemBaseTemplate<Position, Shape>
+
+class DrawSystem : public SystemBaseTemplate<EntityMask, Position, Shape>
 {
 public:
 	void Draw( Graphics& _graphics )noexcept
 	{
 		for( const auto& e : entities )
 		{
-			const auto& pos = e->GetComponent<Position>();
-			const auto& shape= e->GetComponent<Shape>();
+			const auto* entity = e.Extract_Ptr_To<EntityMask>();
+			const auto& pos = entity->GetComponent<Position>();
+			const auto& shape= entity->GetComponent<Shape>();
 			
 
-			visit_unary( shape.object, [ & ]( const auto& obj )noexcept
+			/*visit_unary( shape.object, [ & ]( const auto& obj )noexcept
 				{	
 					_graphics.FillShape( Translator()( pos.value, obj ), shape.color );
-				} );
+				} );*/
 		}
 	}
 };

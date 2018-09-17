@@ -163,6 +163,7 @@
     <ClInclude Include="System.h" />
     <ClInclude Include="variant_helper.h" />
     <ClInclude Include="Vec2.h" />
+    <ClInclude Include="World.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="COMInitializer.cpp" />

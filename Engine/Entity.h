@@ -1,134 +1,102 @@
 #pragma once
 
 #include <cassert>
-#include <variant>
-#include <vector>
+#include "variant_helper.h"
+
+class Human;
+class AI;
 
 
+using component_t =
+	Collection<Damage, Dimension, Health, Orientation, Position, Shape, Shield, Velocity>;
+
+
+template<typename..._AcceptedComponents>
 class Entity
 {
+	using value_type = Entity<_AcceptedComponents...>;
+	using iterator = CollectionIterator<_AcceptedComponents...>;
+	using const_iterator = ConstCollectionIterator<_AcceptedComponents...>;
+	using reference = Variant<_AcceptedComponents...>&;
+	using const_reference = const Variant<_AcceptedComponents...>&;
+	using pointer = Variant<_AcceptedComponents...>*;
+	using const_pointer = const Variant<_AcceptedComponents...>*;
+
 public:
-	static Entity Create() 
+	template<typename ComponentT, typename...Args> 
+	void AddComponent( Args&&... _args )
 	{
-		return {};	
-	}
-	template<typename ComponentT, typename...Args> Entity& AddComponent( Args&&...args )
-	{
-		components.emplace_back( ComponentT( std::forward<Args>( args )... ) );
-		return *this;
-	}
-	template<typename ComponentT> Entity& AddComponent( ComponentT&& _component )
-	{
-		components.push_back( std::forward<ComponentT>( _component ) );
-		return *this;
-	}
-	template<typename ComponentT> void RemoveComponent( ComponentT _component )
-	{
-		auto findit = std::find_if(components.begin(),components.end(),
-			[]( const auto& v )
-			{
-				bool comp_found = false;
-				std::visit( [ & ]( const auto& comp )
-					{
-						using type = std::decay_t<decltype( comp )>;
-						if constexpr( std::is_same_v<type, ComponentT> )
-						{
-							comp_found = true;
-						}
-					}, v );
+		static_assert(
+			has_type<ComponentT, _AcceptedComponents...>(),
+			"The component you are tring to add is not in the accepted\n"
+			"list of components for this entity"
+			);
 
-				return comp_found;
-			} );
-
-		if( findit != components.end() )
+		// TODO: Maybe assert if component already added?
+		if( !HasComponent<ComponentT>() )
 		{
-			if( components.size() == 1 )
-			{
-				components.clear();
-			}
-			else
-			{
-				std::swap( *findit, components.back() );
-				components.pop_back();
-			}
-			
+			components.AddVariant<ComponentT>( std::forward<Args>( _args )... );
 		}
+	}
+	template<typename ComponentT>
+	void AddComponent( ComponentT&& _component )
+	{
+		static_assert(
+			has_type<ComponentT, _AcceptedComponents...>(),
+			"The component you are tring to add is not in the accepted\n"
+			"list of components for this entity"
+			);
+		components.AddVariant( std::forward<ComponentT>( _component ) );
+	}
+	template<typename ComponentT> void RemoveComponent()
+	{
+		auto findit = components.FindVariant<ComponentT>();
+		components.SwapAndPop( findit );
 	}
 
 	template<typename ComponentT> bool HasComponent()const noexcept
 	{
-		for( auto& v : components )
-		{
-			if( std::holds_alternative<ComponentT>( v ) )
-			{
-				return true;
-			}
-		}
-		return false;
+		return components.IsValidIterator( components.FindVariant<ComponentT>() )
 	}
 	template<typename ComponentT> ComponentT& GetComponent()
 	{
-		assert( ( !components.empty() ) && "Component vector is empty." );
+		static_assert( ( has_type<ComponentT, _AcceptedComponents...>() ),
+			"Component isn't in the list of accepted types." );
+		assert( ( !components.empty() ) && "Component collection is empty." );
 
-		ComponentT* comp = nullptr;
-		for( auto& v : components )
+		auto findit = components.FindVariant<ComponentT>();
+		if( components.IsValidIterator( findit ) )
 		{
-			auto lookup = [ & ]( auto& obj )noexcept
-			{
-				using type = std::decay_t<decltype( obj )>;
-				if constexpr( std::is_same_v<type, ComponentT> )
-				{
-					comp = &obj;
-				}
-			};
-
-			std::visit( lookup, v );
-
-			if( comp ) return *comp;
+			return ( *findit ).Extract_Ref_To<ComponentT>();
 		}
 
 		throw std::runtime_error( "Component not found in entity." );
 	}
 	template<typename ComponentT> const ComponentT& GetComponent()const
 	{
-		ComponentT* comp = nullptr;
-		for( auto& v : components )
-		{
-			std::visit(
-				[ & ]( auto& obj )
-				{
-					if constexpr( std::is_same_v<decltype( obj ), ComponentT> )
-					{
-						comp = &obj;
-					}
-				}, v );
+		static_assert( ( has_type<ComponentT, _AcceptedComponents...>() ),
+			"Component isn't in the list of accepted types." );
+		assert( ( !components.empty() ) && "Component collection is empty." );
 
-			if( comp )
-				return *comp;
+		auto findit = components.FindVariant<ComponentT>();
+		if( components.IsValidIterator( findit ) )
+		{
+			auto& vref = ( *findit );
+			
+			return vref.Extract_Ref_To<ComponentT>();
 		}
 
 		throw std::runtime_error( "Component not found in entity." );
 	}
 
 private:
-	using ComponentVector =
-		std::vector<
-			std::variant<
-				Position,
-				Velocity,
-				Orientation,
-				Health,
-				Shield,
-				Damage,
-				Dimension,
-				Shape
-			>
-		>;
-private:
-	ComponentVector components;
+	Collection<_AcceptedComponents...> components;
 };
+using EntityMask = 
+	Entity<Damage, Dimension, Health, Orientation, Position, Shape, Shield, Velocity>;
 
-class Player :public Entity
+class Player :public Entity<Position,Velocity,Health,Shape>
 {
-
+public:
+	using EntityType = Entity<Position, Velocity, Health, Shape>;
 };

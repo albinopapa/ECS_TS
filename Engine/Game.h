@@ -24,6 +24,7 @@
 #include "Mouse.h"
 #include "Graphics.h"
 #include "System.h"
+#include "World.h"
 
 class Game
 {
@@ -32,6 +33,7 @@ public:
 	Game( const Game& ) = delete;
 	Game& operator=( const Game& ) = delete;
 	void Go();
+
 private:
 	void ComposeFrame();
 	void UpdateModel();
@@ -44,8 +46,7 @@ private:
 	/********************************/
 	/*  User Variables              */
 	/********************************/
-	MoveSystem mover;
-	DrawSystem drawer;
-	Entity rect;
 	Player player;
+	//TestWorld<CollisionSystem, DamageSystem, DrawSystem, HealthSystem, MoveSystem> world;
+	World<CollisionSystem, DamageSystem, DrawSystem, HealthSystem, MoveSystem> world;
 };
