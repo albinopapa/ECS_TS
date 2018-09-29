@@ -1,102 +1,178 @@
 #pragma once
 
+#include "Component.h"
+#include "ECS_Utilities.h"
+#include "Message.h"
+#include "Receiver.h"
+#include "Sender.h"
 #include <cassert>
-#include "variant_helper.h"
-
-class Human;
-class AI;
-
-
-using component_t =
-	Collection<Damage, Dimension, Health, Orientation, Position, Shape, Shield, Velocity>;
+#include <stdexcept>
+#include <vector>
+#include <variant>
 
 
-template<typename..._AcceptedComponents>
-class Entity
+class EntityBase : public Receiver, public Sender
 {
-	using value_type = Entity<_AcceptedComponents...>;
-	using iterator = CollectionIterator<_AcceptedComponents...>;
-	using const_iterator = ConstCollectionIterator<_AcceptedComponents...>;
-	using reference = Variant<_AcceptedComponents...>&;
-	using const_reference = const Variant<_AcceptedComponents...>&;
-	using pointer = Variant<_AcceptedComponents...>*;
-	using const_pointer = const Variant<_AcceptedComponents...>*;
+public:
+	using iterator = shared_pool<component_t>::iterator;
+	using const_iterator = shared_pool<component_t>::const_iterator;
 
 public:
-	template<typename ComponentT, typename...Args> 
-	void AddComponent( Args&&... _args )
+	EntityBase()noexcept
 	{
-		static_assert(
-			has_type<ComponentT, _AcceptedComponents...>(),
-			"The component you are tring to add is not in the accepted\n"
-			"list of components for this entity"
-			);
+		components.reserve( 10 );
+		components.push_back( std::monostate() );
+	}
+	iterator begin()noexcept { return components.begin(); }
+	iterator end()noexcept { return components.end()-1; }
+	const_iterator begin()const noexcept { return components.begin(); }
+	const_iterator end()const noexcept { return components.end()-1; }
 
-		// TODO: Maybe assert if component already added?
-		if( !HasComponent<ComponentT>() )
+	size_t count()const { return components.size() - 1; }
+
+	template<typename ComponentType> ComponentType& get_component()
+	{
+		auto findit = find_component<ComponentType>();
+
+		return std::get<ComponentType>( *findit );
+	}
+	template<typename ComponentType>const ComponentType& get_component()const
+	{
+		auto findit = find_component<ComponentType>();
+
+		return std::get<ComponentType>( *findit );
+	}
+
+	template<typename ComponentType>
+	bool has_component()const noexcept
+	{
+		return find_component<ComponentType>() != end();
+	}
+
+	template<typename ComponentType, typename...Rest>
+	bool has_all()const
+	{
+		bool hasAll = has_component<ComponentType>();
+		if( hasAll )
 		{
-			components.AddVariant<ComponentT>( std::forward<Args>( _args )... );
-		}
-	}
-	template<typename ComponentT>
-	void AddComponent( ComponentT&& _component )
-	{
-		static_assert(
-			has_type<ComponentT, _AcceptedComponents...>(),
-			"The component you are tring to add is not in the accepted\n"
-			"list of components for this entity"
-			);
-		components.AddVariant( std::forward<ComponentT>( _component ) );
-	}
-	template<typename ComponentT> void RemoveComponent()
-	{
-		auto findit = components.FindVariant<ComponentT>();
-		components.SwapAndPop( findit );
-	}
-
-	template<typename ComponentT> bool HasComponent()const noexcept
-	{
-		return components.IsValidIterator( components.FindVariant<ComponentT>() )
-	}
-	template<typename ComponentT> ComponentT& GetComponent()
-	{
-		static_assert( ( has_type<ComponentT, _AcceptedComponents...>() ),
-			"Component isn't in the list of accepted types." );
-		assert( ( !components.empty() ) && "Component collection is empty." );
-
-		auto findit = components.FindVariant<ComponentT>();
-		if( components.IsValidIterator( findit ) )
-		{
-			return ( *findit ).Extract_Ref_To<ComponentT>();
+			if constexpr( sizeof...( Rest ) > 0 )
+			{
+				hasAll &= has_all<Rest...>();
+			}
 		}
 
-		throw std::runtime_error( "Component not found in entity." );
+		return hasAll;
 	}
-	template<typename ComponentT> const ComponentT& GetComponent()const
+protected:
+	template<typename ComponentType, typename Source>
+	ComponentType& add_component( Source* _this )
 	{
-		static_assert( ( has_type<ComponentT, _AcceptedComponents...>() ),
-			"Component isn't in the list of accepted types." );
-		assert( ( !components.empty() ) && "Component collection is empty." );
+		const auto last = count();
+		components[ last ] = ComponentType();
+		components.push_back( std::monostate() );
 
-		auto findit = components.FindVariant<ComponentT>();
-		if( components.IsValidIterator( findit ) )
-		{
-			auto& vref = ( *findit );
-			
-			return vref.Extract_Ref_To<ComponentT>();
-		}
+		send<ComponentAdded>( _this );
 
-		throw std::runtime_error( "Component not found in entity." );
+		return std::get<ComponentType>( components[ last ] );
 	}
 
-private:
-	Collection<_AcceptedComponents...> components;
+	template<typename Source, typename Components, typename...Rest>
+	void add_components( Source* _this, Components _component, Rest&&... _rest )
+	{
+		auto& component = components.back();
+		components.push_back( std::monostate() );
+		*component = std::move( _component );
+		if constexpr( sizeof...( Rest ) > 0 )
+		{
+			add_components(_this, std::forward<Rest>( _rest )... );
+		}
+	}
+
+	template<typename ComponentType, typename Source>
+	void remove_component( Source* _this )
+	{
+		send<ComponentRemoved>( _this );
+		auto holds_component = [ & ]( auto& _component )
+		{
+			return  std::holds_alternative<ComponentType>( _component );
+		};
+		swap_and_pop_if( components, holds_component );
+	}
+	template<typename ComponentType>
+	iterator find_component()noexcept
+	{
+		return std::find_if(
+			begin(),
+			end(),
+			[ & ]( auto& _component ) 
+			{ 
+				return std::holds_alternative<ComponentType>( _component ); 
+			}
+		);
+	}
+	template<typename ComponentType>
+	const_iterator find_component()const noexcept
+	{
+		return std::find_if(
+			begin(),
+			end(),
+			[ & ]( auto& _component )
+			{
+				return std::holds_alternative<ComponentType>( _component );
+			}
+		);
+	}
+protected:
+	shared_pool<component_t> components;
 };
-using EntityMask = 
-	Entity<Damage, Dimension, Health, Orientation, Position, Shape, Shield, Velocity>;
 
-class Player :public Entity<Position,Velocity,Health,Shape>
+
+class Entity : public EntityBase
 {
 public:
-	using EntityType = Entity<Position, Velocity, Health, Shape>;
+	Entity() = default;
+
+	template<typename ComponentType>
+	ComponentType& add_component()
+	{
+		return EntityBase::add_component<ComponentType>( this );
+	}
+
+	template<typename Components, typename...Rest>
+	void add_components( Components&& _component, Rest&&... _rest )
+	{
+		EntityBase::add_components( 
+			this, std::forward<Components>( _component ), std::forward<Rest>( _rest )... );
+	}
+
+	template<typename ComponentType> void remove_component()
+	{
+		EntityBase::remove_component<ComponentType>( this );
+	}
+
+};
+
+class EntityManager
+{
+public:
+	shared_resource<Entity> create_entity()
+	{
+		const size_t index = entities.size();
+		entities.push_back( Entity() );
+		return entities[ index ];
+	}
+	void remove_entity( const shared_resource<Entity>& _entity )
+	{
+		auto findit = std::find_if(entities.begin(),entities.end(),
+			[ & ]( const shared_pool<Entity>::resource& _e )
+			{
+				return _e.get() == _entity.get();
+			} );
+		if( findit != entities.end() )
+		{
+			entities.erase( findit );
+		}
+	}
+private:
+	shared_pool<Entity> entities;
 };

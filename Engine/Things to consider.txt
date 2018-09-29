@@ -1,0 +1,3 @@
+shared_pool
+	- how to signal removing all shared resources
+	- should erasing a range just decrease ref counts or remove from container

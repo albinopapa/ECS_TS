@@ -142,6 +142,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="algors.h" />
     <ClInclude Include="ChiliException.h" />
     <ClInclude Include="ChiliMath.h" />
     <ClInclude Include="ChiliWin.h" />
@@ -149,19 +150,25 @@
     <ClInclude Include="COMInitializer.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="DXErr.h" />
+    <ClInclude Include="ECS_iterators.h" />
+    <ClInclude Include="ECS_observer.h" />
+    <ClInclude Include="ECS_type_traits.h" />
+    <ClInclude Include="ECS_Utilities.h" />
     <ClInclude Include="Entity.h" />
     <ClInclude Include="FrameTimer.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="Graphics.h" />
     <ClInclude Include="Keyboard.h" />
     <ClInclude Include="MainWindow.h" />
+    <ClInclude Include="Message.h" />
     <ClInclude Include="Mouse.h" />
+    <ClInclude Include="Receiver.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="Sender.h" />
     <ClInclude Include="Shapes.h" />
     <ClInclude Include="Sound.h" />
     <ClInclude Include="SoundEffect.h" />
     <ClInclude Include="System.h" />
-    <ClInclude Include="variant_helper.h" />
     <ClInclude Include="Vec2.h" />
     <ClInclude Include="World.h" />
   </ItemGroup>
@@ -176,6 +183,7 @@
     <ClCompile Include="MainWindow.cpp" />
     <ClCompile Include="Mouse.cpp" />
     <ClCompile Include="Sound.cpp" />
+    <ClCompile Include="System.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="FramebufferPS.hlsl">
@@ -244,6 +252,9 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="Chili.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Things to consider.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,62 +1,125 @@
 #pragma once
 
-#include "variant_helper.h"
+#include "Sender.h"
+#include "Receiver.h"
+#include "Message.h"
+#include "System.h"
 #include <algorithm>
 #include <variant>
 #include <vector>
 
 
-template<typename...AcceptedSystems>
-class World
+class WorldBase : public Sender, public Receiver
 {
-	using SystemVector = std::vector<std::variant<AcceptedSystems...>>;
 public:
-	template<typename System>
-	World& AddSystem( System&& _system )
+	WorldBase()
+	{}
+	template<typename SystemType, typename...Args> 
+	SystemType create_system()
 	{
-		systems.emplace_back( std::forward<System>( _system ) );
-		return *this;
+		return SystemType( entity_manager );
 	}
-	template<typename System>
-	World& RemoveSystem( const System& _system )
+	template<typename SystemType>
+	SystemType& add_system( SystemType _system )
 	{
-		const auto findit = FindSystem<System>();
+		auto& vsystem = systems.emplace_back( std::move( _system ) );
+		auto& system = std::get<SystemType>( vsystem );
+		add_receiver( system.get_receiver() );
+		return system;
+	}
+	template<typename SystemType> void remove_system()
+	{
+		erase_if( systems, [ & ]( auto& _object )
+			{
+				return std::holds_alternative<std::unique_ptr<SystemType>>( _object );
+			} );
+	}
+	template<typename SystemType> shared_pool<system_t>::iterator find_system()
+	{
+		return std::find_if(
+			systems.begin(),
+			systems.end(),
+			[ & ]( auto& _vsystem )
+			{
+				return std::holds_alternative<SystemType>( _vsystem );
+			}
+		);
+	}
 
-		if( findit != systems.end() )
+	template<typename SystemType>
+	shared_pool<system_t>::const_iterator find_system()const
+	{
+		return std::find_if(
+			systems.begin(),
+			systems.end(),
+			[ & ]( const auto& _vsystem )
+			{
+				return std::holds_alternative<SystemType>( _vsystem );
+			}
+		);
+	}
+
+protected:
+	template<typename SystemType, typename...Args> auto execute_if( Args&&... _args )
+	{
+		if( auto findit = find_system<SystemType>(); findit != systems.end() )
 		{
-			if( systems.size() > 1 )
-			{
-				std::swap( *findit, systems.back() );
-				systems.pop_back();
-			}
-			else
-			{
-				systems.clear();
-			}
+			std::get<SystemType>( *findit ).execute( std::forward<Args>( _args )... );
 		}
 	}
-	template<typename System>
-	bool HasSystem()
+	template<typename SystemType, typename MessageType, typename...Req> 
+	bool send_if( Entity* _entity )
 	{
-		return FindSystem<System>() != systems.end();
+		if( auto it = find_system<SystemType>(); it != systems.end() )
+		{
+			if( _entity->has_all<Req...>() )
+			{
+				send<MessageType>( _entity );
+				return true;
+			}
+		}
+
+		return false;
+	}
+	template<typename SystemType, typename Pred, typename...Args>
+	void process_messages( SystemType& _vsystem, Pred&& _execute, Args&&... _args )
+	{
+		auto handle_message = [ & ]( auto& _system )
+		{
+			using Type = std::decay_t<decltype( _system )>;
+
+			if constexpr( std::is_same_v<SystemType, Type> )
+			{
+				_execute( std::forward<Args>( _args )... );
+			}
+		};
+
+		std::visit( handle_message, system );
 	}
 
-private:
-	using SystemIterator = typename SystemVector::iterator;
-	using ConstSystemIterator = typename SystemVector::const_iterator;
+protected:
+	EntityManager entity_manager;
+	shared_pool<system_t> systems;
+};
 
-	template<typename System>
-	SystemIterator FindSystem()
+class World : public WorldBase
+{
+public:
+	void process_messages()
 	{
-		auto it =
-			std::find_if( systems.begin(), systems.end(),
-				[ & ]( const auto& v )
-				{
-					return std::holds_alternative<System>( v );
-				} );
-		return it;
+		for( auto& message : messages )
+		{
+		}
 	}
-
-private:
-	SystemVector systems;
+	void update( float _dt )
+	{
+		process_messages();
+		if( systems.empty() ) return;
+		
+		execute_if<Movable>( _dt );
+	}
+	void draw( Graphics& _graphics )
+	{
+		execute_if<Drawable>( _graphics );
+	}
 };

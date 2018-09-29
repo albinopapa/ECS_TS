@@ -46,7 +46,5 @@ private:
 	/********************************/
 	/*  User Variables              */
 	/********************************/
-	Player player;
-	//TestWorld<CollisionSystem, DamageSystem, DrawSystem, HealthSystem, MoveSystem> world;
-	World<CollisionSystem, DamageSystem, DrawSystem, HealthSystem, MoveSystem> world;
+	World world;
 };

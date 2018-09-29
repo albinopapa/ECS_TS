@@ -3,150 +3,275 @@
 #include "Component.h"
 #include "Entity.h"
 #include "Graphics.h"
-#include "variant_helper.h"
-#include <algorithm>
-#include <tuple>
+#include "Receiver.h"
+#include "Sender.h"
+#include <memory>
 
-template<typename T> T& identify( const T& t ) { return t; }
-
-template<typename EntityType, typename...Required>
-class SystemBaseTemplate
+class System : public Sender, public Receiver
 {
-	template<size_t Idx>
-	using required_type = std::tuple_element_t<Idx, std::tuple<Required...>>;
-
-	static constexpr auto requirement_count = std::tuple_size_v<std::tuple<Required...>>;
 public:
-	void AddEntity( EntityType& _entity )
-	{
-		if( !HasRequirements<0, required_type<0>>( &_entity ) )
-			throw std::runtime_error( "Entity doesn't meet requirements for this system" );
+	using entity_resource_vector = std::vector<shared_resource<Entity>>;
 
-		entities.push_back( &_entity );
+public:
+	System( EntityManager& _entity_manager )
+		:
+		entity_manager( &_entity_manager )
+	{
+	}
+
+	template<typename...Components>
+	shared_resource<Entity> create_entity( Components&&... _components)
+	{
+		auto entity = entity_manager->create_entity();
+		entity->add_components( std::forward<Components>( _components )... );
+		return entity;
+	}
+
+	void add_entity( shared_resource<Entity> _entity )
+	{
+		auto& entity = entities.emplace_back( std::move( _entity ) );
+	}
+
+	void remove_entity( const shared_resource<Entity>& _entity )
+	{
+		erase_if( entities, [ & ]( const shared_resource<Entity>& _ent )
+			{
+				return _entity == _ent;
+			} );
+	}
+
+	entity_resource_vector::iterator find_entity( const shared_resource<Entity>& _entity )
+	{
+		auto findit = std::find_if(
+			entities.begin(),
+			entities.end(),
+			[ & ]( const shared_resource<Entity>& _ent )
+			{
+				return _entity == _ent;
+			} );
+
+		return findit;
+	}
+protected:
+	template<typename MessageType, typename Pred, typename...Args>
+	void process_messages( message_t& _vobject, Pred&& _execute, Args&&... _args )
+	{
+		auto handle_message = [ & ]( auto& _object )
+		{
+			using InnerType = std::decay_t<decltype( _object )>;
+
+			if constexpr( std::is_same_v<Type, InnerType> )
+			{
+				_execute( std::forward<Args>( _args )... );
+			}
+		};
+
+		std::visit( handle_message, _vobject );
+	}
+
+	template<typename MessageType, typename Pred, typename...Args>
+	void process_message( const message_t& _vmessage, Pred&& _execute, Args&&... _args )
+	{
+		auto handle_message = [ & ]( const auto& _object )
+		{
+			using InnerType = std::decay_t<decltype( _object )>;
+
+			if constexpr( std::is_same_v<MessageType, InnerType> )
+			{
+				_execute( _object, std::forward<Args>( _args )... );
+			}
+		};
+
+		std::visit( handle_message, _vmessage );
 	}
 	
-	void RemoveEntity( const EntityType& _entity )noexcept
+	void remove_entity( entity_resource_vector::iterator _entity_iter )
 	{
-		auto iter = entities.FindVariant( _entity );
-		entities.SwapAndPop( iter );
+		entities.erase( _entity_iter );
 	}
 
 protected:
-	Collection<EntityType*> entities;
+	entity_resource_vector entities;
+	EntityManager* entity_manager = nullptr;
 
 private:
-	template<size_t Idx, typename ComponentT, typename EntityT>
-	bool HasRequirements( EntityT& _entity )const noexcept
+	friend class World;
+};
+
+class Movable : public System
+{
+public:
+	using System::System;
+
+	void execute( float _dt )
+	{
+		process_messages( _dt );
+	}
+	static shared_resource<Entity> create_compatible_entity()
+	{
+		shared_resource<Entity> entity;
+		entity->add_components( Position( 0.f, 0.f ), Velocity( 0.f, 0.f ) );
+		return entity;
+	}
+private:
+	class MessageHandler
+	{
+	public:
+		MessageHandler( Movable& _parent, float _dt )
+			:
+			parent( _parent ),
+			dt( _dt )
+		{
+		}
+		void operator()( std::monostate _message ) {}
+		void operator()( ComponentAdded _message ) {}
+		void operator()( ComponentRemoved _message ){}
+		void operator()( EntityAdded _message ){}
+		void operator()( EntityRemoved _message ){}
+		void operator()( SystemAdded _message ) {}
+		void operator()( SystemRemoved _message ) {}
+
+	private:
+		Movable& parent;
+		float dt;
+	};
+private:
+	void process_messages( float _dt )
 	{	
-		constexpr auto next = Idx + 1;
-		
-		bool hasRequired = _entity.HasComponent<ComponentT>();
-		if constexpr( next < requirement_count )
+		MessageHandler handler( *this, _dt );
+		for( auto& vmessage : messages )
 		{
-			hasRequired &=
-				HasRequirements<next, required_type<next>>( _entity );
+			std::visit( handler, vmessage );
 		}
-
-		return hasRequired;
+		messages.clear();
+	}
+	void Update( shared_resource<Entity> _entity, const float _dt )
+	{
+		_entity->get_component<Position>().value +=
+			( _entity->get_component<Velocity>().value * _dt );
 	}
 };
 
-class MoveSystem : public SystemBaseTemplate<EntityMask, Position, Velocity>
+class Drawable : public System
 {
 public:
-	void Move( float _delta_time )
-	{
-		for( auto& e : entities )
-		{
-			auto entity = e.Extract_Ptr_To<EntityMask>();
+	using System::System;
 
-			auto& pos = entity->GetComponent<Position>();
-			const auto& vel = entity->GetComponent<Velocity>();
-			pos.value += ( vel.value * _delta_time );
-		}
+	void execute( Graphics& _graphics )
+	{
+		process_messages( _graphics );
+		Draw( _graphics );
 	}
-};
-
-class CollisionSystem : public SystemBaseTemplate<EntityMask, Position, Shape>
-{
-public:
-
-	template<typename WorldType>
-	void Check( WorldType& _world)
+	template<typename ShapeType>
+	static shared_resource<Entity> create_compatible_entity()
 	{
-		for( int j = 0; j < int( entities.size() ); ++j )
+		auto get_shape = [ & ]()
 		{
-			auto* ent1 = entities[ j ];
-			for( int i = j + 1; i < int( entities.size() ); ++i )
+			if constexpr( std::is_same_v<ShapeType, Rect> )
+			{	
+				return Rect{ 0.f,0.f,0.f,0.f };
+			}
+			else 
+			{	
+				return Circle{ Vec2( 0.f,0.f ),10.f };
+			}
+		};
+
+		shared_resource<Entity> entity;
+		entity->add_components( Position( 0.f, 0.f ), Shape( get_shape(), Colors::Red ) );
+		return entity;
+	}
+
+private:
+	class MessageHandler
+	{
+	public:
+		MessageHandler( Drawable& _parent, Graphics& _graphics )
+			:
+			parent( _parent ),
+			graphics( _graphics )
+		{}
+		void operator()( std::monostate _message ) {}
+		void operator()( ComponentAdded _message ) 
+		{
+			if( auto findit = parent.find_entity( _message.entity );
+				findit == parent.entities.end() )
 			{
-				auto* ent2 = entities[ i ];
-				if( _world.HasSystem<DamageSystem>() )
+				if( _message.entity->has_all<Position, Shape>() )
 				{
-					const auto& dmg = _world.GetSystem<DamageSystem>();
-					
+					parent.add_entity( std::move( _message.entity ) );
 				}
 			}
 		}
-	}
-	bool IsColliding( const Rect& _lRect, const Rect& _rRect )
-	{
-		return
-			_lRect.left <= _rRect.right && _lRect.right >= _rRect.left &&
-			_lRect.top <= _rRect.bottom && _lRect.bottom >= _rRect.top;
-	}
-	bool IsColliding( const Rect& _rect, const Circle& _circle )
-	{
-		return
-			( _rect.left - _circle.center.x ) < _circle.radius ||
-			( _rect.top - _circle.center.y ) < _circle.radius ||
-			( _rect.right - _circle.center.x ) < _circle.radius ||
-			( _rect.bottom - _circle.center.y ) < _circle.radius;
-	}
-	bool IsColliding( const Circle& _circle, const Rect& _rect )
-	{
-		return IsColliding( _rect, _circle );
-	}
-	bool IsColliding( const Circle& _lCircle, const Circle& _rCircle )
-	{
-		auto sq = []( float val ) { return val * val; };
-		const auto dx = sq( _lCircle.center.x - _rCircle.center.x );
-		const auto dy = sq( _lCircle.center.y - _rCircle.center.y );
-		const auto combRad = sq( _lCircle.radius ) + sq( _rCircle.radius );
-		return ( dx + dy ) <= combRad;
-	}
-
-private:
-};
-
-class DamageSystem : public SystemBaseTemplate<EntityMask, Damage, Health>
-{
-public:
-private:
-};
-
-class HealthSystem : public SystemBaseTemplate<EntityMask, Damage, Health>
-{
-public:
-
-private:
-};
-
-class DrawSystem : public SystemBaseTemplate<EntityMask, Position, Shape>
-{
-public:
-	void Draw( Graphics& _graphics )noexcept
-	{
-		for( const auto& e : entities )
+		void operator()( ComponentRemoved _message ) 
 		{
-			const auto* entity = e.Extract_Ptr_To<EntityMask>();
-			const auto& pos = entity->GetComponent<Position>();
-			const auto& shape= entity->GetComponent<Shape>();
-			
+			if( auto findit = parent.find_entity( _message.entity );
+				findit != parent.entities.end() )
+			{
+				if( !_message.entity->has_all<Position, Shape>() )
+				{
+					parent.remove_entity( findit );
+				}
+			}
+		}
+		void operator()( EntityAdded _message ) 
+		{
+			if( _message.entity->has_all<Position, Shape>() )
+			{
+				parent.add_entity( std::move( _message.entity ) );
+			}
+		}
+		void operator()( EntityRemoved _message )
+		{	
+			if( auto findit = parent.find_entity( _message.entity ); 
+				findit != parent.entities.end() )
+			{
+				if( !_message.entity->has_all<Position, Shape>() )
+				{
+					parent.remove_entity( findit );
+				}
+			}
+		}
+		void operator()( SystemAdded _message ) {}
+		void operator()( SystemRemoved _message ) {}
 
-			/*visit_unary( shape.object, [ & ]( const auto& obj )noexcept
-				{	
-					_graphics.FillShape( Translator()( pos.value, obj ), shape.color );
-				} );*/
+	private:
+		Drawable& parent;
+		Graphics& graphics;
+	};
+
+private:
+	void process_messages( Graphics& _graphics )
+	{
+		MessageHandler handler( *this, _graphics );
+		for( auto& vmessage : messages )
+		{
+			std::visit( handler, vmessage );
+		}
+		messages.clear();
+	}
+	void Draw( Graphics& _graphics )const
+	{
+		Translator translator;
+		for( const auto& entity : entities )
+		{
+			const Shape& shape = entity->get_component<Shape>();
+
+			std::visit( [ & ]( const auto& _shape )
+				{
+					const auto shape_trans =
+						translator(
+							entity->get_component<Position>().value, _shape
+						);
+
+					_graphics.FillShape( shape_trans, shape.color );
+				}, shape.object );
 		}
 	}
 };
+
+using system_t = std::variant<
+	Movable,
+	Drawable
+>;
+

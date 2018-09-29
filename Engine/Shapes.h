@@ -1,5 +1,7 @@
 #pragma once
+
 #include "Vec2.h"
+
 struct Rect { float left, top, right, bottom; };
 struct Circle { Vec2 center; float radius; };
 

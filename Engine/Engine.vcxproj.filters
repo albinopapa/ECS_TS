@@ -81,11 +81,32 @@
     <ClInclude Include="System.h">
       <Filter>Header Files\ECS</Filter>
     </ClInclude>
-    <ClInclude Include="variant_helper.h">
+    <ClInclude Include="World.h">
       <Filter>Header Files\ECS</Filter>
     </ClInclude>
-    <ClInclude Include="World.h">
+    <ClInclude Include="Message.h">
+      <Filter>Header Files\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="Sender.h">
+      <Filter>Header Files\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="Receiver.h">
+      <Filter>Header Files\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="algors.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ECS_Utilities.h">
+      <Filter>Header Files\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="ECS_iterators.h">
+      <Filter>Header Files\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="ECS_observer.h">
+      <Filter>Header Files\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="ECS_type_traits.h">
+      <Filter>Header Files\ECS</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -119,6 +140,9 @@
     <ClCompile Include="FrameTimer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="System.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="FramebufferPS.hlsl">
@@ -137,5 +161,8 @@
     <Image Include="Chili.ico">
       <Filter>Resource Files</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Things to consider.txt" />
   </ItemGroup>
 </Project>

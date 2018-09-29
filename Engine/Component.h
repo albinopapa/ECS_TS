@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Colors.h"
 #include "Shapes.h"
 #include <variant>
 
@@ -61,15 +62,45 @@ struct Shape
 	Color color;
 };
 struct Shield
-{ 
+{
+	Shield() = default;
+	Shield( Shape _shape, const float _strength )
+		:
+		shape( _shape ), strength( _strength )
+	{
+	}
 	Shape shape;
 	float strength = 0.f; 
 };
 struct Damage
 {
-	float _value = 2.f;
+	Damage() = default;
+	Damage( const float _value )
+		:
+		value( _value )
+	{
+	}
+	float value = 2.f;
 };
 struct Dimension
 {
+	Dimension() = default;
+	Dimension( float _width, float _height )
+		:
+		width( _width ), height( _height )
+	{
+	}
 	float width = 0.f, height = 0.f;
 };
+
+using component_t = std::variant<
+	std::monostate,
+	Position,
+	Velocity,
+	Orientation,
+	Health,
+	Shape,
+	Shield,
+	Damage,
+	Dimension
+>;
