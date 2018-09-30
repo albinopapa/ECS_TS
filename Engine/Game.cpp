@@ -30,6 +30,13 @@ Game::Game( MainWindow& wnd )
 	wnd( wnd ),
 	gfx( wnd )
 {
+	Movable& move_system = 
+		world.add_system( world.create_system<Movable>() );
+
+	world.add_receiver( move_system );
+		
+	shared_resource<Entity> ball = move_system.create_compatible_entity();
+	ball->add_component<Shape>();
 	int a = 0;
 }
 

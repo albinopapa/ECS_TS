@@ -2,27 +2,29 @@
 
 #include "algors.h"
 #include "Receiver.h"
+#include "ECS_Utilities.h"
 
 class Sender
 {
 public:
-	void add_receiver( Receiver* _receiver )
+	using receiver_resource = shared_resource<Receiver>;
+public:
+	void add_receiver( receiver_resource _receiver )
 	{	
-		auto findit = find_receiver( _receiver );
-
-		if( findit == receivers.end() )
+		if( auto findit = find_receiver( _receiver ); 
+			findit == receivers.end() )
+		{
 			receivers.push_back( _receiver );
+		}
 	}
-	void remove_receiver( Receiver*_receiver )
+	void remove_receiver( receiver_resource _receiver )
 	{
-		erase_if( receivers, [ & ]( const Receiver* _recv )
-			{
-				return _receiver == _recv;
-			} );
+		erase_if( receivers, 
+			[ & ]( const receiver_resource _recv ){ return _receiver == _recv; } );
 	}
 
-protected:
-	template<typename MessageType, typename...Args> void send( Args&&... _args )
+	template<typename MessageType, typename...Args> 
+	void send( Args&&... _args )
 	{
 		for( auto* receiver : receivers )
 		{
@@ -31,17 +33,21 @@ protected:
 	}
 
 private:
-	template<typename ReceiverType>
-	std::vector<Receiver*>::iterator find_receiver(ReceiverType* _receiver)
+	auto find_receiver( receiver_resource _receiver)const noexcept->
+		std::vector<receiver_resource>::const_iterator
 	{
+		return find_if( receivers, 
+			[ & ]( receiver_resource _recv ){ return _receiver == _recv; } );
+		
+		/*
 		return std::find_if(
 			receivers.begin(),
 			receivers.end(),
-			[ & ]( const Receiver* _recv )
+			[ & ]( receiver_resource _recv )
 			{
 				return _receiver == _recv;
-			} );
+			} );*/
 	}
 private:
-	std::vector<Receiver*> receivers;
+	std::vector<receiver_resource> receivers;
 };

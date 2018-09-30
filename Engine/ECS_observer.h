@@ -1,17 +1,24 @@
 #pragma once
+#include <variant>
+#include <vector>
 
+class observer_base
+{
+public:
+	virtual void on_notify() = 0;
+};
 // Observer class to inherit from user observers
-template<typename ObserverTypes>
-class observer : public ObserverTypes
+template<typename ObserverType>
+class observer : public ObserverType 
 {
 public:
 	// BASE CLASSES MUST AT LEAST IMPLEMENT THIS FUNCTION
-	using ObserverTypes::on_notify;
+	using ObserverType::on_notify;
 };
 
 // Template deduction guide for observer class
-template<typename ObserverTypes>
-observer( ObserverTypes )->observer<ObserverTypes>;
+template<typename ObserverType>
+observer( ObserverType )->observer<ObserverType>;
 
 
 // Subject class to inherit from user subjects
@@ -28,4 +35,3 @@ public:
 template<typename...SubjectType>
 subject( SubjectType... )->subject<SubjectType...>;
 // END SUBJECT
-

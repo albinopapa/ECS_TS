@@ -151,6 +151,7 @@
     <ClInclude Include="Component.h" />
     <ClInclude Include="DXErr.h" />
     <ClInclude Include="ECS_iterators.h" />
+    <ClInclude Include="ECS_PostOffice.h" />
     <ClInclude Include="ECS_observer.h" />
     <ClInclude Include="ECS_type_traits.h" />
     <ClInclude Include="ECS_Utilities.h" />
@@ -169,6 +170,7 @@
     <ClInclude Include="Sound.h" />
     <ClInclude Include="SoundEffect.h" />
     <ClInclude Include="System.h" />
+    <ClInclude Include="variant_helper.h" />
     <ClInclude Include="Vec2.h" />
     <ClInclude Include="World.h" />
   </ItemGroup>
@@ -183,7 +185,6 @@
     <ClCompile Include="MainWindow.cpp" />
     <ClCompile Include="Mouse.cpp" />
     <ClCompile Include="Sound.cpp" />
-    <ClCompile Include="System.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="FramebufferPS.hlsl">

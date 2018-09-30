@@ -52,3 +52,56 @@ template<typename Ty> struct remove_cv_ref<Ty&>
 };
 
 template<typename Ty> using remove_cv_ref_t = typename remove_cv_ref<Ty>::type;
+
+template<typename T, typename U>
+struct is_similar
+{
+	static constexpr bool value = std::is_same_v<std::decay_t<T>, std::decay_t<U>>;
+};
+
+template<typename T, typename U>
+constexpr bool is_similar_v = is_similar<T, U>::value;
+
+template<typename T, typename U, typename...Rest>
+constexpr bool has_type()noexcept
+{
+	bool hasType = is_similar_v<T, U>;
+	if constexpr( sizeof...( Rest ) > 0 )
+	{
+		hasType |= has_type<T, Rest...>();
+	}
+	return hasType;
+}
+
+template<size_t idx, typename T, typename U, typename...Rest>
+constexpr size_t get_index_varified()noexcept
+{
+	if constexpr( std::is_same_v<std::decay_t<T>, std::decay_t<U>> )
+	{
+		return idx;
+	}
+	if constexpr( sizeof...( Rest ) > 0 )
+	{
+		return get_index_varified<idx + 1, T, Rest...>();
+	}
+}
+
+template<size_t idx, typename T, typename U, typename...Rest>
+constexpr size_t get_index()noexcept
+{
+	if constexpr( !has_type<T, U, Rest...>() )
+	{
+		return -1;
+	}
+	return get_index_varified<idx, T, U, Rest...>();
+}
+
+template<typename T, typename First, typename...Rest>
+struct has_required : has_required<T, Rest...>
+{
+	static constexpr bool value = has_type<T, First, Rest...>();
+};
+
+template<typename T, typename...Types>
+constexpr bool has_required_t = has_required<T, Types...>::value;
+

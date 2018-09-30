@@ -7,25 +7,37 @@
 #include <algorithm>
 #include <variant>
 #include <vector>
+#include "ECS_PostOffice.h"
 
 
-class WorldBase : public Sender, public Receiver
+struct WorldMsgFilter
+{
+	void operator()( EntityAdded ) {}
+	void operator()( EntityRemoved ) {}
+	void operator()( SystemAdded ) {}
+	void operator()( SystemRemoved ) {}
+};
+
+class WorldBase : public ECS_Mailbox<WorldMsgFilter>
 {
 public:
 	WorldBase()
-	{}
-	template<typename SystemType, typename...Args> 
-	SystemType create_system()
+		:
+		ECS_Mailbox<WorldMsgFilter>( ECS_PostOffice::mailbox_factory<WorldMsgFilter>() )
 	{
-		return SystemType( entity_manager );
+	}
+
+	template<typename SystemType, typename...Args> 
+	SystemType create_system(Args&&... _args)
+	{
+		return SystemType( std::forward<Args>( _args )... );		
 	}
 	template<typename SystemType>
 	SystemType& add_system( SystemType _system )
 	{
-		auto& vsystem = systems.emplace_back( std::move( _system ) );
-		auto& system = std::get<SystemType>( vsystem );
-		add_receiver( system.get_receiver() );
-		return system;
+		systems.push_back( std::move( _system ) );
+		shared_resource<system_t>& vsystem = systems.back();
+		return std::get<SystemType>( *vsystem );
 	}
 	template<typename SystemType> void remove_system()
 	{
@@ -68,13 +80,13 @@ protected:
 		}
 	}
 	template<typename SystemType, typename MessageType, typename...Req> 
-	bool send_if( Entity* _entity )
+	bool send_if( shared_resource<Entity> _entity )
 	{
 		if( auto it = find_system<SystemType>(); it != systems.end() )
 		{
 			if( _entity->has_all<Req...>() )
 			{
-				send<MessageType>( _entity );
+				send_message<MessageType>( std::move( _entity ) );
 				return true;
 			}
 		}
@@ -107,9 +119,10 @@ class World : public WorldBase
 public:
 	void process_messages()
 	{
-		for( auto& message : messages )
+		for( auto& message : receiver->get_messages() )
 		{
 		}
+		receiver->clear_messages();
 	}
 	void update( float _dt )
 	{
@@ -122,4 +135,5 @@ public:
 	{
 		execute_if<Drawable>( _graphics );
 	}
+
 };

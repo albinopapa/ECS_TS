@@ -11,7 +11,7 @@
 #include <variant>
 
 
-class EntityBase : public Receiver, public Sender
+class EntityBase 
 {
 public:
 	using iterator = shared_pool<component_t>::iterator;
@@ -68,12 +68,12 @@ protected:
 	ComponentType& add_component( Source* _this )
 	{
 		const auto last = count();
-		components[ last ] = ComponentType();
+		*components[ last ] = ComponentType();
 		components.push_back( std::monostate() );
 
 		send<ComponentAdded>( _this );
 
-		return std::get<ComponentType>( components[ last ] );
+		return std::get<ComponentType>( *components[ last ] );
 	}
 
 	template<typename Source, typename Components, typename...Rest>
@@ -163,12 +163,11 @@ public:
 	}
 	void remove_entity( const shared_resource<Entity>& _entity )
 	{
-		auto findit = std::find_if(entities.begin(),entities.end(),
-			[ & ]( const shared_pool<Entity>::resource& _e )
+		if( auto findit = find_if( entities,
+			[ & ]( const Entity& _e )
 			{
-				return _e.get() == _entity.get();
-			} );
-		if( findit != entities.end() )
+				return &_e == _entity.get();
+			} ); findit != entities.end() )
 		{
 			entities.erase( findit );
 		}

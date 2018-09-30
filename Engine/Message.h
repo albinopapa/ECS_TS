@@ -5,6 +5,13 @@
 #include "ECS_Utilities.h"
 
 class Entity;
+class Movable;
+class Drawable;
+using system_t = std::variant<
+	Movable,
+	Drawable
+>;
+
 
 struct ComponentAdded
 {
@@ -33,7 +40,7 @@ struct EntityAdded
 	EntityAdded() = default;
 	EntityAdded( shared_resource<Entity> _entity )
 		:
-		entity( _entity )
+		entity( std::move( _entity ) )
 	{
 	}
 
@@ -53,24 +60,24 @@ struct EntityRemoved
 struct SystemAdded 
 { 
 	SystemAdded() = default;
-	SystemAdded( shared_resource<System> _system )
+	SystemAdded( shared_resource<system_t> _system )
 		:
 		system( _system )
 	{
 	}
 
-	shared_resource<System> system;
+	shared_resource<system_t> system;
 };
 struct SystemRemoved
 {
 	SystemRemoved() = default;
-	SystemRemoved( shared_resource<System> _system )
+	SystemRemoved( shared_resource<system_t> _system )
 		:
 		system( _system )
 	{
 	}
 
-	shared_resource<System> system;
+	shared_resource<system_t> system;
 };
 
 using message_t = std::variant<

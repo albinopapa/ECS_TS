@@ -8,14 +8,6 @@
 #else
 #define ThrowAssert(cond,message) if((cond))throw std::runtime_error(message);
 #endif
-template<typename T, typename U>
-struct is_similar
-{
-	static constexpr bool value = std::is_same_v<std::decay_t<T>, std::decay_t<U>>;
-};
-template<typename T, typename U>
-constexpr bool is_similar_v = is_similar<T, U>::value;
-
 template<typename T>
 struct is_moveable
 {
@@ -37,39 +29,6 @@ void assign_pointer( T& t, U*& u )
 	}
 }
 
-template<typename T, typename U, typename...Rest>
-constexpr bool has_type()noexcept
-{
-	bool hasType = is_similar_v<T, U>;
-	if constexpr( sizeof...( Rest ) > 0 )
-	{
-		hasType |= has_type<T, Rest...>();
-	}
-	return hasType;
-}
-
-template<size_t idx, typename T, typename U, typename...Rest>
-constexpr size_t get_index_varified()noexcept
-{
-	if constexpr( std::is_same_v<std::decay_t<T>, std::decay_t<U>> )
-	{
-		return idx;
-	}
-	if constexpr( sizeof...( Rest ) > 0 )
-	{
-		return get_index_varified<idx + 1, T, Rest...>();
-	}
-}
-
-template<size_t idx, typename T, typename U, typename...Rest>
-constexpr size_t get_index()noexcept
-{
-	if constexpr( !has_type<T, U, Rest...>() )
-	{
-		return -1;
-	}
-	return get_index_varified<idx, T, U, Rest...>();
-}
 
 template<typename...Variants>
 class Variant
@@ -236,7 +195,7 @@ public:
 		auto Call = [ & ]( const auto&& _object )
 		{
 			using ActiveType = std::decay_t<decltype( _object )>;
-			if constexpr( is_similar_v<decltype( _object ), CallWith> )
+			if constexpr( is_similar_v<ActiveType, CallWith> )
 			{
 				_callback( std::forward<ActiveType>( _object ), std::forward<Args>( _args )... );
 			}
@@ -840,6 +799,10 @@ public:
 		return begin() + offset;
 	}
 
+	bool IsValidIterator( iterator _iter )
+	{
+		return _iter != end();
+	}
 	bool IsValidIterator( const_iterator _iter )const
 	{
 		return _iter != end();
