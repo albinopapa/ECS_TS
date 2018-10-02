@@ -1,61 +1,50 @@
 #pragma once
 
-#include <memory>
-#include <variant>
-#include "ECS_Utilities.h"
-
-class Entity;
-class Movable;
-class Drawable;
-using system_t = std::variant<
-	Movable,
-	Drawable
->;
-
+#include "Includes.h"
 
 struct ComponentAdded
 {
 	ComponentAdded() = default;
-	ComponentAdded( shared_resource<Entity> _entity )
+	ComponentAdded( shared_resource<entity_t> _entity )
 		:
 		entity( _entity )
 	{
 	}
 
-	shared_resource<Entity> entity;
+	shared_resource<entity_t> entity;
 };
 struct ComponentRemoved
 {
 	ComponentRemoved() = default;
-	ComponentRemoved( shared_resource<Entity> _entity )
+	ComponentRemoved( shared_resource<entity_t> _entity )
 		:
 		entity( _entity )
 	{
 	}
 
-	shared_resource<Entity> entity;
+	shared_resource<entity_t> entity;
 };
 struct EntityAdded
 {
 	EntityAdded() = default;
-	EntityAdded( shared_resource<Entity> _entity )
+	EntityAdded( shared_resource<entity_t> _entity )
 		:
 		entity( std::move( _entity ) )
 	{
 	}
 
-	shared_resource<Entity> entity;
+	shared_resource<entity_t> entity;
 };
 struct EntityRemoved
 {
 	EntityRemoved() = default;
-	EntityRemoved( shared_resource<Entity> _entity )
+	EntityRemoved( shared_resource<entity_t> _entity )
 		:
 		entity( _entity )
 	{
 	}
 
-	shared_resource<Entity> entity;
+	shared_resource<entity_t> entity;
 };
 struct SystemAdded 
 { 
@@ -79,13 +68,3 @@ struct SystemRemoved
 
 	shared_resource<system_t> system;
 };
-
-using message_t = std::variant<
-	std::monostate,
-	ComponentAdded,
-	ComponentRemoved,
-	EntityAdded,
-	EntityRemoved,
-	SystemAdded,
-	SystemRemoved
->;

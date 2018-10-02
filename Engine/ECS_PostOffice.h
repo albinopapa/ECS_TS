@@ -5,15 +5,20 @@
 #include "Receiver.h"
 
 
+
 class ECS_PostOffice
 {
 public:
+
 	template<typename...msg_filter_list>
 	struct ECS_MessageFilter 
 	{
-		using type = ECS_MessageFilter<msg_filter_list>;
+		using type = ECS_MessageFilter<msg_filter_list...>;
 	};
+	template<>struct ECS_MessageFilter<std::nullptr_t> {};
 
+	using ECS_NullMessageFilter = ECS_MessageFilter<std::nullptr_t>;
+	
 	template<typename msg_filter>
 	class ECS_MailBox
 	{
@@ -32,12 +37,16 @@ public:
 		template<typename MessageType>
 		void receive_message( MessageType _message )
 		{
-			if( filter( MessageType ) )
+			if constexpr(has_required_v<MessageType, msg_filter>)
 			{
 				receiver->receive( std::move( _message ) );
 			}
 		}
 
+		void add_receiver( shared_resource<Receiver> _receiver )
+		{
+			sender->add_receiver( _receiver );
+		}
 		shared_resource<Receiver> get_receiver()const { return receiver; }
 	protected:
 		template<typename MessageType, typename...MsgArgs>
@@ -51,6 +60,8 @@ public:
 		shared_resource<Sender> sender;
 		ECS_MessageFilter<msg_filter> filter;
 	};
+
+
 
 public:
 	template<typename msg_filter>
@@ -80,3 +91,10 @@ shared_pool<Receiver> ECS_PostOffice::receivers;
 shared_pool<Sender> ECS_PostOffice::senders;
 
 template<typename msg_filter> using ECS_Mailbox = ECS_PostOffice::ECS_MailBox<msg_filter>;
+
+template<typename T, typename...Types>
+struct has_required<T, ECS_PostOffice::ECS_MessageFilter<Types...>>
+{
+public:
+	static constexpr bool value = has_required<T, Types...>::has();
+};

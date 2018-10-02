@@ -142,7 +142,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="algors.h" />
+    <ClInclude Include="ECS_Algorithms.h" />
     <ClInclude Include="ChiliException.h" />
     <ClInclude Include="ChiliMath.h" />
     <ClInclude Include="ChiliWin.h" />
@@ -150,15 +150,20 @@
     <ClInclude Include="COMInitializer.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="DXErr.h" />
+    <ClInclude Include="ECS_Entity.h" />
+    <ClInclude Include="ECS_Factory.h" />
     <ClInclude Include="ECS_iterators.h" />
     <ClInclude Include="ECS_PostOffice.h" />
     <ClInclude Include="ECS_observer.h" />
+    <ClInclude Include="ECS_System.h" />
     <ClInclude Include="ECS_type_traits.h" />
     <ClInclude Include="ECS_Utilities.h" />
+    <ClInclude Include="ECS_World.h" />
     <ClInclude Include="Entity.h" />
     <ClInclude Include="FrameTimer.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="Graphics.h" />
+    <ClInclude Include="Includes.h" />
     <ClInclude Include="Keyboard.h" />
     <ClInclude Include="MainWindow.h" />
     <ClInclude Include="Message.h" />
@@ -177,6 +182,7 @@
   <ItemGroup>
     <ClCompile Include="COMInitializer.cpp" />
     <ClCompile Include="DXErr.cpp" />
+    <ClCompile Include="Entity.cpp" />
     <ClCompile Include="FrameTimer.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="Graphics.cpp" />
@@ -185,6 +191,7 @@
     <ClCompile Include="MainWindow.cpp" />
     <ClCompile Include="Mouse.cpp" />
     <ClCompile Include="Sound.cpp" />
+    <ClCompile Include="World.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="FramebufferPS.hlsl">

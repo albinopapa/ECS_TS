@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <variant>
 #include <vector>
-
+#include <functional>
 
 template<typename Container,typename Pred>
 auto find_if( Container& _container, Pred&& _pred )
@@ -90,4 +90,85 @@ auto swap_and_pop_if( std::vector<std::variant<TemplateTypes...>>& _container, P
 			}
 		}
 	}
+}
+
+template<typename Ctor, typename Oper, typename Dtor>
+class scope_guard
+{
+public:
+	scope_guard( Ctor _ctor, Oper _oper, Dtor _dtor )
+		:
+		oper( _oper ),
+		do_last( _dtor )
+	{
+		_ctor();
+	}
+	void operator()()
+	{
+		oper();
+	}
+	~scope_guard()
+	{
+		do_last();
+	}
+private:
+	Oper oper;
+	Dtor do_last;
+};
+template<typename Fn> struct Finally
+{
+	Finally( Fn _lastcall ) : lastcall( _lastcall ){}
+	~Finally(){ lastcall(); }
+
+	Fn lastcall;
+};
+
+void do_something() {}
+
+
+
+template<typename Code>
+struct Conditional
+{
+	Conditional() = default;
+	Conditional( Code&& _code )
+		:
+		code( _code )
+	{
+
+	}
+	template<typename Code2>
+	Conditional<Code2> _if( bool _condition, Code2&& _code )
+	{
+		if( !_condition )
+			return Conditional<Code>( std::forward<Code2>( _code ) );
+
+		return *this;
+	}
+	template<typename Code2>
+	Conditional<Code2> _else_if( bool _condition, Code2&& _code )
+	{
+		if( !_condition )
+			return Conditional<Code2>( _code );
+
+		return *this;
+	}
+	template<typename Code2>
+	Conditional<Code2> _else( Code2&& _code )
+	{
+		return Conditional<Code2>( _code );
+	}
+
+	Code code;
+};
+
+template<typename Code> Conditional( Code )->Conditional<Code>;
+
+void func()
+{
+	Conditional condition( [] { int a = -1; } );
+	condition._if( true, [] { double a = -1.0; } )
+		._else_if( true, [] { float a = 1.f; } )
+		._else( [] { char a = 'a'; } ).code();
+
 }

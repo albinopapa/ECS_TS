@@ -1,18 +1,27 @@
 #pragma once
 
 #include "Message.h"
-#include <variant>
-#include <vector>
+#include <optional>
+#include <queue>
 
 class Receiver
 {
 public:
-	template<typename MessageType> void receive( MessageType _message )
+	template<typename MessageType> void on_receive( MessageType _message )
 	{
-		messages.push_back( _message );
+		messages.emplace( std::move( _message ) );
 	}
-	const std::vector<message_t>& get_messages()const { return messages; }
-	void clear_messages() { messages.clear(); }
+	std::optional<message_t> get_message()noexcept
+	{
+		Finally do_last( [ & ]{ messages.pop(); } );
+		
+		return messages.empty() ?
+			std::optional<message_t>{std::nullopt} :
+			std::optional<message_t>{ messages.front() };
+	}
+	const std::queue<message_t>& get_messages()const { return messages; }
+	
 protected:
-	std::vector<message_t> messages;
+
+	std::queue<message_t> messages;
 };

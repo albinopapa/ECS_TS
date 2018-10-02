@@ -1,8 +1,9 @@
 #pragma once
 
-#include "algors.h"
+#include "ECS_Algorithms.h"
 #include "Receiver.h"
 #include "ECS_Utilities.h"
+#include <vector>
 
 class Sender
 {
@@ -19,8 +20,7 @@ public:
 	}
 	void remove_receiver( receiver_resource _receiver )
 	{
-		erase_if( receivers, 
-			[ & ]( const receiver_resource _recv ){ return _receiver == _recv; } );
+		erase_if( receivers, is_same_resource( _receiver ) );
 	}
 
 	template<typename MessageType, typename...Args> 
@@ -28,26 +28,17 @@ public:
 	{
 		for( auto* receiver : receivers )
 		{
-			receiver->receive( MessageType( std::forward<Args>( _args )... ) );
+			receiver->on_receive( MessageType( std::forward<Args>( _args )... ) );
 		}
 	}
 
 private:
 	auto find_receiver( receiver_resource _receiver)const noexcept->
 		std::vector<receiver_resource>::const_iterator
-	{
-		return find_if( receivers, 
-			[ & ]( receiver_resource _recv ){ return _receiver == _recv; } );
-		
-		/*
-		return std::find_if(
-			receivers.begin(),
-			receivers.end(),
-			[ & ]( receiver_resource _recv )
-			{
-				return _receiver == _recv;
-			} );*/
+	{	
+		return find_if( receivers, is_same_resource( _receiver ) );
 	}
 private:
+	
 	std::vector<receiver_resource> receivers;
 };

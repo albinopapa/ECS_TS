@@ -28,15 +28,24 @@
 Game::Game( MainWindow& wnd )
 	:
 	wnd( wnd ),
-	gfx( wnd )
+	gfx( wnd ),
+	vworld( factory.create_world<World>() )
 {
-	Movable& move_system = 
-		world.add_system( world.create_system<Movable>() );
+	World& world = std::get<World>( *vworld );
+	
+	shared_resource<system_t> vmove_system = factory.create_system<Movable>();
+	Movable& move_system = std::get<Movable>( *vmove_system );
 
-	world.add_receiver( move_system );
-		
-	shared_resource<Entity> ball = move_system.create_compatible_entity();
-	ball->add_component<Shape>();
+	world.add_receiver( move_system.get_receiver() );
+	
+	shared_resource<entity_t> ball = factory.create_entity<Player>( 
+			Position( 400.f, 300.f ), 
+			Velocity( 0.f, 0.f ), 
+			Shape( Circle{ {0.f,0.f}, 20.f }, Colors::Blue ) );
+
+	move_system.add_entity( ball );
+
+	world.add_system( vmove_system );
 	int a = 0;
 }
 
@@ -50,10 +59,10 @@ void Game::Go()
 
 void Game::UpdateModel()
 {
-	world.update( .016f );
+	std::get<World>( *vworld ).tick( World::Dispatcher( .016f, gfx ) );
 }
 
 void Game::ComposeFrame()
 {
-	world.draw( gfx );
+	
 }

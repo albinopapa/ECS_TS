@@ -46,5 +46,6 @@ private:
 	/********************************/
 	/*  User Variables              */
 	/********************************/
-	World world;
+	Factory factory;
+	shared_resource<world_t> vworld;
 };

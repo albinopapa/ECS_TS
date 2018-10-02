@@ -96,12 +96,50 @@ constexpr size_t get_index()noexcept
 	return get_index_varified<idx, T, U, Rest...>();
 }
 
-template<typename T, typename First, typename...Rest>
-struct has_required : has_required<T, Rest...>
+template<typename CompareTo, typename ListType> struct find_index;
+template<typename CompareTo, typename...Types>
+struct find_index<CompareTo, std::variant<Types...>>
 {
-	static constexpr bool value = has_type<T, First, Rest...>();
+	static constexpr bool values[] = { std::is_same_v<CompareTo,Types>... };
+	static constexpr size_t numValues = sizeof( values );
+	template<size_t idx = 0>
+	static constexpr size_t _index()
+	{
+		constexpr size_t next = idx + 1;
+		if constexpr( values[ idx ] ) return idx;
+		if constexpr( next < numValues )
+		{
+			return _index<next>();
+		}
+
+		return std::size_t( -1 );
+	}
+public:
+	static constexpr size_t index = _index();
+
+};
+
+//template<typename T, typename First, typename...Rest>
+//struct has_required : has_required<T, Rest...>
+//{
+//	static constexpr bool value = has_type<T, First, Rest...>();
+//};
+
+template<typename T, typename U, typename...Types>
+struct has_required
+{
+	static constexpr bool has()
+	{
+		if constexpr( std::is_same_v<T, U> )
+			return true;
+		else if constexpr( sizeof...( Types ) == 0 )
+			return false;
+		else
+			return has_required<T, Types...>::has();
+	}
+	static constexpr bool value = has();
 };
 
 template<typename T, typename...Types>
-constexpr bool has_required_t = has_required<T, Types...>::value;
+constexpr bool has_required_v = has_required<T, Types...>::value;
 

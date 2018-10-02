@@ -4,15 +4,6 @@
 #include "Shapes.h"
 #include <variant>
 
-struct Position 
-{ 
-	Position() = default; 
-	constexpr Position( float _x, float _y )noexcept
-		:
-		value( _x,_y )
-	{} 
-	Vec2 value; 
-};
 struct Velocity 
 { 
 	Velocity() = default;
@@ -21,7 +12,24 @@ struct Velocity
 		value( _x, _y )
 	{
 	}
-		
+	Velocity operator*( float _s )const
+	{		
+		return { value.x * _s,value.y * _s };
+	}
+	Vec2 value; 
+};
+struct Position 
+{ 
+	Position() = default; 
+	constexpr Position( float _x, float _y )noexcept
+		:
+		value( _x,_y )
+	{}
+	Position& operator+=( const Velocity& _vel )
+	{
+		value += _vel.value;
+		return *this;
+	}
 	Vec2 value; 
 };
 struct Orientation 
@@ -92,15 +100,3 @@ struct Dimension
 	}
 	float width = 0.f, height = 0.f;
 };
-
-using component_t = std::variant<
-	std::monostate,
-	Position,
-	Velocity,
-	Orientation,
-	Health,
-	Shape,
-	Shield,
-	Damage,
-	Dimension
->;
