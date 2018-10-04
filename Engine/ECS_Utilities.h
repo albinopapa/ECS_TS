@@ -619,6 +619,7 @@ private:
 
 template<typename T>
 using shared_resource = typename shared_pool<T>::resource;
+
 template<typename ResourceType>
 struct is_same_resource
 {

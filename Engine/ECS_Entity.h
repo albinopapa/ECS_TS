@@ -6,13 +6,13 @@
 
 namespace screws
 {
-	template<typename ComponentVariant>
+	template<typename Tag, typename ComponentVariant>
 	class ECS_Entity
 	{
 	public:
 		using component_resource = shared_resource<ComponentVariant>;
-		using iterator = std::vector<component_resource>::iterator;
-		using const_iterator = std::vector<component_resource>::const_iterator;
+		using iterator = typename std::vector<component_resource>::iterator;
+		using const_iterator = typename std::vector<component_resource>::const_iterator;
 
 	public:
 		ECS_Entity() = default;
@@ -20,7 +20,7 @@ namespace screws
 		template<typename...ComponentResources>
 		ECS_Entity( ComponentResources&&... _components )
 		{
-			add_components( std::forward<Components>( _components )... );
+			add_components( std::forward<ComponentResources>( _components )... );
 		}
 
 		void add_component( component_resource _component )
@@ -31,9 +31,6 @@ namespace screws
 		template<typename First, typename...Rest>
 		void add_components( First&& _first, Rest&&... _rest )
 		{
-			static_assert( std::is_same_v<First, component_t>,
-				"add_components requires: shared_resource<component_t> types." );
-
 			components.push_back( _first );
 			if constexpr( sizeof...( Rest ) > 0 )
 			{
@@ -90,7 +87,7 @@ namespace screws
 		template<typename ComponentType>
 		bool has_component()const noexcept
 		{
-			return find_component<ComponentType>() != end();
+			return find_component<ComponentType>() != components.end();
 		}
 
 		template<typename ComponentType, typename...Rest>

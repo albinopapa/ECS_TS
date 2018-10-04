@@ -3,27 +3,43 @@
 #include "ECS_Utilities.h"
 
 /*
-	System
+	Sender
 	Component
 	Receiver
 	Entity
 	World
-	Sender
+	System
 */
 
 namespace screws
 {
-	template<typename EntityList, typename ComponentList, typename MessageList, typename SystemList, typename WorldList>
+	template<
+		typename ComponentList,
+		typename EntityList,
+		typename MessageList, 
+		typename ReceiverList,
+		typename SenderList,
+		typename SystemList, 
+		typename WorldList
+	>
 	class ECS_Factory
 	{
 	public:
-		using entity_t = EntityList;
 		using component_t = ComponentList;
+		using entity_t = EntityList;
 		using message_t = MessageList;
+		using receiver_t = ReceiverList;
+		using sender_t = SenderList;
 		using system_t = SystemList;
 		using world_t = WorldList;
 
 	public:
+		static ECS_Factory& instance()
+		{
+			static ECS_Factory factory;
+			return factory;
+		}
+
 		template<typename EntityType, typename...Args>
 		shared_resource<entity_t> create_entity( Args&&... _args )
 		{
@@ -59,10 +75,33 @@ namespace screws
 			return world_pool.back();
 		}
 
+		template<typename ReceiverType>
+		shared_resource<receiver_t> create_receiver()
+		{
+			receiver_pool.push_back( ReceiverType() );
+			return receiver_pool.back();
+		}
+
+		template<typename SenderType>
+		shared_resource<sender_t> create_sender()
+		{
+			sender_pool.push_back( SenderType() );
+			return sender_pool.back();
+		}
+
 	private:
-		shared_pool<entity_t> entity_pool;
+		ECS_Factory() = default;
+		ECS_Factory( const ECS_Factory& ) = delete;
+		ECS_Factory( ECS_Factory&& ) = delete;
+		ECS_Factory& operator=( const ECS_Factory& ) = delete;
+		ECS_Factory& operator=( ECS_Factory&& ) = delete;
+
+	private:
 		shared_pool<component_t> component_pool;
+		shared_pool<entity_t> entity_pool;
 		shared_pool<message_t> message_pool;
+		shared_pool<receiver_t> receiver_pool;
+		shared_pool<sender_t> sender_pool;
 		shared_pool<system_t> system_pool;
 		shared_pool<world_t> world_pool;
 	};

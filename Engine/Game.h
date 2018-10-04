@@ -23,8 +23,7 @@
 #include "Keyboard.h"
 #include "Mouse.h"
 #include "Graphics.h"
-#include "System.h"
-#include "World.h"
+#include "Includes.h"
 
 class Game
 {
@@ -46,6 +45,5 @@ private:
 	/********************************/
 	/*  User Variables              */
 	/********************************/
-	Factory factory;
 	shared_resource<world_t> vworld;
 };

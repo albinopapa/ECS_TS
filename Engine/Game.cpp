@@ -23,29 +23,55 @@
 #include "FrameTimer.h"
 #include "Game.h"
 #include <cassert>
-#include "ECS_Utilities.h"
+
 
 Game::Game( MainWindow& wnd )
 	:
 	wnd( wnd ),
 	gfx( wnd ),
-	vworld( factory.create_world<World>() )
+	vworld( g_factory.create_world<screws::ECS_World<system_t,message_t,WorldMessageFilter>>() )
 {
-	World& world = std::get<World>( *vworld );
+	auto& world = std::get<screws::ECS_World<system_t, message_t, WorldMessageFilter>>( *vworld );
 	
-	shared_resource<system_t> vmove_system = factory.create_system<Movable>();
-	Movable& move_system = std::get<Movable>( *vmove_system );
+	shared_resource<system_t> vmovable = 
+		g_factory.create_system<screws::ECS_System<
+		MovableDispatcher, 
+		MovableMessageHandler, 
+		entity_t, 
+		message_t, 
+		SystemMessageFilter>>();
 
-	world.add_receiver( move_system.get_receiver() );
+	screws::ECS_System<
+		MovableDispatcher,
+		MovableMessageHandler,
+		entity_t,
+		message_t,
+		SystemMessageFilter>& movable = 
+			std::get<screws::ECS_System<
+				MovableDispatcher,
+				MovableMessageHandler,
+				entity_t,
+				message_t,
+				SystemMessageFilter>>( *vmovable );
+
 	
-	shared_resource<entity_t> ball = factory.create_entity<Player>( 
-			Position( 400.f, 300.f ), 
-			Velocity( 0.f, 0.f ), 
-			Shape( Circle{ {0.f,0.f}, 20.f }, Colors::Blue ) );
+	world.add_receiver( movable.get_receiver() );
+	
+	auto position = 
+		g_factory.create_component<screws::ECS_Component<position_tag>>( 400.f, 300.f );
+	auto velocity = 
+		g_factory.create_component<screws::ECS_Component<velocity_tag>>( 0.f, 0.f );
+	auto shape =
+		g_factory.create_component<screws::ECS_Component<shape_tag>>( Circle{ {0.f,0.f}, 20.f }, Colors::Blue );
+	auto ball =
+		g_factory.create_entity<screws::ECS_Entity<player_tag, component_t>>(
+			position,
+			velocity,
+			shape );
 
-	move_system.add_entity( ball );
+	movable.add_entity( ball );
 
-	world.add_system( vmove_system );
+	world.add_system( vmovable );
 	int a = 0;
 }
 
@@ -59,7 +85,16 @@ void Game::Go()
 
 void Game::UpdateModel()
 {
-	std::get<World>( *vworld ).tick( World::Dispatcher( .016f, gfx ) );
+	auto& v_world = *vworld;
+	screws::ECS_World<
+		system_t,
+		message_t,
+		WorldMessageFilter>& world = std::get<screws::ECS_World<
+		system_t,
+		message_t,
+		WorldMessageFilter>>( v_world );
+
+	world.tick( WorldDispatcher( .016f, gfx ) );
 }
 
 void Game::ComposeFrame()

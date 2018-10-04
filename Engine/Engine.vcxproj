@@ -142,6 +142,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="DeclarationsComponent.h" />
+    <ClInclude Include="DeclarationsEntity.h" />
+    <ClInclude Include="DeclarationsMessage.h" />
+    <ClInclude Include="DeclarationsSystem.h" />
     <ClInclude Include="ECS_Algorithms.h" />
     <ClInclude Include="ChiliException.h" />
     <ClInclude Include="ChiliMath.h" />
@@ -150,11 +154,14 @@
     <ClInclude Include="COMInitializer.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="DXErr.h" />
+    <ClInclude Include="ECS_Component.h" />
     <ClInclude Include="ECS_Entity.h" />
     <ClInclude Include="ECS_Factory.h" />
     <ClInclude Include="ECS_iterators.h" />
-    <ClInclude Include="ECS_PostOffice.h" />
+    <ClInclude Include="ECS_Message.h" />
+    <ClInclude Include="ECS_Mailbox.h" />
     <ClInclude Include="ECS_observer.h" />
+    <ClInclude Include="ECS_Screws.h" />
     <ClInclude Include="ECS_System.h" />
     <ClInclude Include="ECS_type_traits.h" />
     <ClInclude Include="ECS_Utilities.h" />
@@ -168,13 +175,14 @@
     <ClInclude Include="MainWindow.h" />
     <ClInclude Include="Message.h" />
     <ClInclude Include="Mouse.h" />
-    <ClInclude Include="Receiver.h" />
+    <ClInclude Include="ECS_Receiver.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="Sender.h" />
+    <ClInclude Include="ECS_Sender.h" />
     <ClInclude Include="Shapes.h" />
     <ClInclude Include="Sound.h" />
     <ClInclude Include="SoundEffect.h" />
-    <ClInclude Include="System.h" />
+    <ClInclude Include="SystemMovable.h" />
+    <ClInclude Include="SystemDrawable.h" />
     <ClInclude Include="variant_helper.h" />
     <ClInclude Include="Vec2.h" />
     <ClInclude Include="World.h" />
@@ -189,8 +197,11 @@
     <ClCompile Include="Keyboard.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MainWindow.cpp" />
+    <ClCompile Include="Message.cpp" />
     <ClCompile Include="Mouse.cpp" />
     <ClCompile Include="Sound.cpp" />
+    <ClCompile Include="SystemMovable.cpp" />
+    <ClCompile Include="SystemDrawable.cpp" />
     <ClCompile Include="World.cpp" />
   </ItemGroup>
   <ItemGroup>

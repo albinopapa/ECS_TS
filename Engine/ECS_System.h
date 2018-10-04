@@ -1,61 +1,76 @@
 #pragma once
 
 #include "ECS_Algorithms.h"
+#include "ECS_Mailbox.h"
 #include "ECS_Utilities.h"
 
 
-
-template<typename EntityVariant>
-class ECS_System
+namespace screws
 {
-public:
-	using entity_resource = shared_resource<EntityVariant>;
-	using iterator = std::vector<entity_resource>::iterator;
-	using const_iterator = std::vector<entity_resource>::const_iterator;
-
-public:
-	void add_entity( entity_resource _entity )
+	template<
+		typename ExecuteDispatch,
+		typename MessageDispatch,
+		typename EntityVariant, 
+		typename MessageVariant, 
+		typename MessageFilter>
+	class ECS_System :
+		public ECS_Mailbox<MessageVariant, MessageFilter>
 	{
-		entities.push_back( std::move( _entity ) );
-	}
+	public:
+		using entity_resource = shared_resource<EntityVariant>;
+		using iterator = typename std::vector<entity_resource>::iterator;
+		using const_iterator = typename std::vector<entity_resource>::const_iterator;
 
-	void remove_entity( const entity_resource& _entity )
-	{
-		if( auto it = find_if( entities, is_same_resource( _entity ) ); it != entities.end() )
+	public:
+		void add_entity( entity_resource _entity )
 		{
-			entities.erase( it );
+			entities.push_back( std::move( _entity ) );
 		}
-	}
 
-	template<typename SystemVisitor>
-	void execute( SystemVisitor& _visitor )
-	{
-		for( auto& ventity : entities )
+		void remove_entity( const entity_resource& _entity )
 		{
-			std::visit( _visitor, *ventity );
+			if( auto it = find_if( entities, is_same_resource( _entity ) ); it != entities.end() )
+			{
+				entities.erase( it );
+			}
 		}
-	}
 
-	template<typename SystemVisitor>
-	void execute( const SystemVisitor& _visitor )const
-	{
-		for( auto& ventity : entities )
+		void execute( MessageDispatch _msg_visitor, ExecuteDispatch _execute_visitor )
 		{
-			std::visit( _visitor, *ventity );
+			process_messages( _msg_visitor );
+			for( auto& ventity : entities )
+			{
+				std::visit( _execute_visitor, *ventity );
+			}
 		}
-	}
 
+		bool has_entity( const entity_resource& _entity )const
+		{
+			return ( find_entity( _entity ) != entities.end() );
+		}
 
-	iterator find_entity( const entity_resource& _entity )
-	{
-		return find_if( entities, is_same_resource<entity_resource>( _entity ) );
-	}
+		iterator find_entity( const entity_resource& _entity )
+		{
+			return find_if( entities, is_same_resource<entity_resource>( _entity ) );
+		}
 
-	const_iterator find_entity( const entity_resource& _entity )const
-	{
-		return find_if( entities, is_same_resource<entity_resource>( _entity ) );
-	}
+		const_iterator find_entity( const entity_resource& _entity )const
+		{
+			return find_if( entities, is_same_resource<entity_resource>( _entity ) );
+		}
 
-protected:
-	std::vector<entity_resource> entities;
-};
+	private:
+		void process_messages( MessageDispatch& _visitor )
+		{
+			for( std::optional<MessageVariant> result = receiver->get_next_message();
+				result.has_value();
+				result = receiver->get_next_message() )
+			{
+				std::visit( _visitor, result.value() );
+			}
+		}
+
+	protected:
+		std::vector<entity_resource> entities;
+	};
+}
