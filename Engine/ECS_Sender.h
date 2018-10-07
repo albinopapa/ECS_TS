@@ -28,7 +28,7 @@ namespace screws
 		template<typename MessageType, typename...Args> 
 		void send( Args&&... _args )
 		{
-			for( auto* receiver : receivers )
+			for( auto& receiver : receivers )
 			{
 				receiver->on_receive( MessageType( std::forward<Args>( _args )... ) );
 			}

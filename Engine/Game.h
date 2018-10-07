@@ -29,6 +29,7 @@ class Game
 {
 public:
 	Game( class MainWindow& wnd );
+	~Game();
 	Game( const Game& ) = delete;
 	Game& operator=( const Game& ) = delete;
 	void Go();

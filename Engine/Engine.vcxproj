@@ -142,6 +142,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Aliases.h" />
     <ClInclude Include="DeclarationsComponent.h" />
     <ClInclude Include="DeclarationsEntity.h" />
     <ClInclude Include="DeclarationsMessage.h" />

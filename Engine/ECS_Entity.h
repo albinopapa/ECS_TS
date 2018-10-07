@@ -1,13 +1,15 @@
 #pragma once
 
 #include "ECS_Algorithms.h"
+#include "ECS_Mailbox.h"
 #include "ECS_Utilities.h"
 #include <optional>
 
 namespace screws
 {
-	template<typename Tag, typename ComponentVariant>
-	class ECS_Entity
+	template<typename Tag, typename ComponentVariant, typename MessageVariant>
+	class ECS_Entity :
+		public ECS_Mailbox<MessageVariant, ECS_NullMessageFilter, sender_only>
 	{
 	public:
 		using component_resource = shared_resource<ComponentVariant>;
@@ -16,7 +18,7 @@ namespace screws
 
 	public:
 		ECS_Entity() = default;
-
+		
 		template<typename...ComponentResources>
 		ECS_Entity( ComponentResources&&... _components )
 		{
@@ -38,7 +40,23 @@ namespace screws
 			}
 		}
 
-		void remove_component( component_resource _component ) {}
+		void remove_component( component_resource _component ) 
+		{
+			if( auto it = find_if( components, is_same_resource( _component ) );
+				it != components.end() )
+			{
+				components.erase( it );
+			}
+		}
+	
+		template<typename ComponentT>
+		void remove_component()
+		{
+			if( auto it = find_component<ComponentT>(); it != components.end() )
+			{
+				components.erase( it );
+			}
+		}
 
 		template<typename ComponentType>
 		iterator find_component()noexcept
@@ -106,6 +124,13 @@ namespace screws
 			return hasAll;
 		}
 
+		void set_mailbox( 
+			shared_resource<ECS_Receiver<MessageVariant>> _receiver, 
+			shared_resource<ECS_Sender<MessageVariant>> _sender)
+		{
+			receiver = _receiver;
+			sender = _sender;
+		}
 	private:
 		std::vector<component_resource> components;
 	};

@@ -137,29 +137,62 @@ template<> struct screws::ECS_Component<dimension_tag>
 	float width = 0.f, height = 0.f;
 };
 
+using Damage = screws::ECS_Component<damage_tag>;
+using Dimesnion = screws::ECS_Component<dimension_tag>;
+using Health = screws::ECS_Component<health_tag>;
+using Orientation = screws::ECS_Component<orientation_tag>;
+using Position = screws::ECS_Component<position_tag>;
+using Shape = screws::ECS_Component<shape_tag>;
+using Shield = screws::ECS_Component<shield_tag>;
+using Velocity = screws::ECS_Component<velocity_tag>;
+
 // Component list alias
 using component_t = std::variant<
-	screws::ECS_Component<damage_tag>,
-	screws::ECS_Component<dimension_tag>,
-	screws::ECS_Component<health_tag>,
-	screws::ECS_Component<orientation_tag>,
-	screws::ECS_Component<position_tag>,
-	screws::ECS_Component<shape_tag>,
-	screws::ECS_Component<shield_tag>,
-	screws::ECS_Component<velocity_tag>
+	Damage,
+	Dimesnion,
+	Health,
+	Orientation,
+	Position,
+	Shape,
+	Shield,
+	Velocity
 >;
 
 // Entity list alias
 using entity_t = std::variant<
-	screws::ECS_Entity<player_tag, component_t>,
-	screws::ECS_Entity<enemy_tag, component_t>>;
+	screws::ECS_Entity<player_tag, component_t, std::variant<
+	screws::ECS_Message<componentAdded_tag>,
+	screws::ECS_Message<componentRemoved_tag>,
+	screws::ECS_Message<entityAdded_tag>,
+	screws::ECS_Message<entityRemoved_tag>,
+	screws::ECS_Message<systemAdded_tag>,
+	screws::ECS_Message<systemRemoved_tag>>>,
+	screws::ECS_Entity<enemy_tag, component_t, std::variant<
+	screws::ECS_Message<componentAdded_tag>,
+	screws::ECS_Message<componentRemoved_tag>,
+	screws::ECS_Message<entityAdded_tag>,
+	screws::ECS_Message<entityRemoved_tag>,
+	screws::ECS_Message<systemAdded_tag>,
+	screws::ECS_Message<systemRemoved_tag>>>>;
 
 class MovableDispatcher
 {
 public:
 	MovableDispatcher( float _dt );
-	void operator()( screws::ECS_Entity<player_tag, component_t>& _entity );
-	void operator()( screws::ECS_Entity<enemy_tag, component_t>& _entity );
+	void operator()( screws::ECS_Entity<player_tag, component_t, std::variant<
+		screws::ECS_Message<componentAdded_tag>,
+		screws::ECS_Message<componentRemoved_tag>,
+		screws::ECS_Message<entityAdded_tag>,
+		screws::ECS_Message<entityRemoved_tag>,
+		screws::ECS_Message<systemAdded_tag>,
+		screws::ECS_Message<systemRemoved_tag>>>& _entity );
+	void operator()( screws::ECS_Entity<enemy_tag, component_t, std::variant<
+		screws::ECS_Message<componentAdded_tag>,
+		screws::ECS_Message<componentRemoved_tag>,
+		screws::ECS_Message<entityAdded_tag>,
+		screws::ECS_Message<entityRemoved_tag>,
+		screws::ECS_Message<systemAdded_tag>,
+		screws::ECS_Message<systemRemoved_tag>>>& _entity );
 private:
 	float dt;
 };
@@ -168,18 +201,30 @@ class DrawableDispatcher
 public:
 	DrawableDispatcher( Graphics& _graphics );
 
-	void operator()( const screws::ECS_Entity<player_tag, component_t>& _entity );
-	void operator()( const screws::ECS_Entity<enemy_tag, component_t>& _entity );
+	void operator()( const screws::ECS_Entity<player_tag, component_t, std::variant<
+		screws::ECS_Message<componentAdded_tag>,
+		screws::ECS_Message<componentRemoved_tag>,
+		screws::ECS_Message<entityAdded_tag>,
+		screws::ECS_Message<entityRemoved_tag>,
+		screws::ECS_Message<systemAdded_tag>,
+		screws::ECS_Message<systemRemoved_tag>>>& _entity );
+	void operator()( const screws::ECS_Entity<enemy_tag, component_t, std::variant<
+		screws::ECS_Message<componentAdded_tag>,
+		screws::ECS_Message<componentRemoved_tag>,
+		screws::ECS_Message<entityAdded_tag>,
+		screws::ECS_Message<entityRemoved_tag>,
+		screws::ECS_Message<systemAdded_tag>,
+		screws::ECS_Message<systemRemoved_tag>>>& _entity );
 private:
 	Graphics& gfx;
 };
 
 using SystemMessageFilter =
 screws::ECS_MessageFilter<
-	componentAdded_tag,
-	componentRemoved_tag,
-	entityAdded_tag,
-	entityRemoved_tag>;
+	screws::ECS_Message<componentAdded_tag>,
+	screws::ECS_Message<componentRemoved_tag>,
+	screws::ECS_Message<entityAdded_tag>,
+	screws::ECS_Message<entityRemoved_tag>>;
 
 class MovableMessageHandler
 {
@@ -188,8 +233,20 @@ public:
 		MovableDispatcher,
 		MovableMessageHandler,
 		std::variant<
-		screws::ECS_Entity<player_tag, component_t>,
-		screws::ECS_Entity<enemy_tag, component_t>>,
+		screws::ECS_Entity<player_tag, component_t, std::variant<
+		screws::ECS_Message<componentAdded_tag>,
+		screws::ECS_Message<componentRemoved_tag>,
+		screws::ECS_Message<entityAdded_tag>,
+		screws::ECS_Message<entityRemoved_tag>,
+		screws::ECS_Message<systemAdded_tag>,
+		screws::ECS_Message<systemRemoved_tag>>>,
+		screws::ECS_Entity<enemy_tag, component_t, std::variant<
+		screws::ECS_Message<componentAdded_tag>,
+		screws::ECS_Message<componentRemoved_tag>,
+		screws::ECS_Message<entityAdded_tag>,
+		screws::ECS_Message<entityRemoved_tag>,
+		screws::ECS_Message<systemAdded_tag>,
+		screws::ECS_Message<systemRemoved_tag>>>>,
 		std::variant<
 		screws::ECS_Message<componentAdded_tag>,
 		screws::ECS_Message<componentRemoved_tag>,
@@ -210,8 +267,20 @@ private:
 		MovableDispatcher,
 		MovableMessageHandler,
 		std::variant<
-		screws::ECS_Entity<player_tag, component_t>,
-		screws::ECS_Entity<enemy_tag, component_t>>,
+		screws::ECS_Entity<player_tag, component_t, std::variant<
+		screws::ECS_Message<componentAdded_tag>,
+		screws::ECS_Message<componentRemoved_tag>,
+		screws::ECS_Message<entityAdded_tag>,
+		screws::ECS_Message<entityRemoved_tag>,
+		screws::ECS_Message<systemAdded_tag>,
+		screws::ECS_Message<systemRemoved_tag>>>,
+		screws::ECS_Entity<enemy_tag, component_t, std::variant<
+		screws::ECS_Message<componentAdded_tag>,
+		screws::ECS_Message<componentRemoved_tag>,
+		screws::ECS_Message<entityAdded_tag>,
+		screws::ECS_Message<entityRemoved_tag>,
+		screws::ECS_Message<systemAdded_tag>,
+		screws::ECS_Message<systemRemoved_tag>>>>,
 		std::variant<
 		screws::ECS_Message<componentAdded_tag>,
 		screws::ECS_Message<componentRemoved_tag>,
@@ -229,8 +298,20 @@ public:
 		DrawableDispatcher,
 		DrawableMessageHandler,
 		std::variant<
-		screws::ECS_Entity<player_tag, component_t>,
-		screws::ECS_Entity<enemy_tag, component_t>>,
+		screws::ECS_Entity<player_tag, component_t, std::variant<
+		screws::ECS_Message<componentAdded_tag>,
+		screws::ECS_Message<componentRemoved_tag>,
+		screws::ECS_Message<entityAdded_tag>,
+		screws::ECS_Message<entityRemoved_tag>,
+		screws::ECS_Message<systemAdded_tag>,
+		screws::ECS_Message<systemRemoved_tag>>>,
+		screws::ECS_Entity<enemy_tag, component_t, std::variant<
+		screws::ECS_Message<componentAdded_tag>,
+		screws::ECS_Message<componentRemoved_tag>,
+		screws::ECS_Message<entityAdded_tag>,
+		screws::ECS_Message<entityRemoved_tag>,
+		screws::ECS_Message<systemAdded_tag>,
+		screws::ECS_Message<systemRemoved_tag>>>>,
 		std::variant<
 		screws::ECS_Message<componentAdded_tag>,
 		screws::ECS_Message<componentRemoved_tag>,
@@ -251,8 +332,20 @@ private:
 		DrawableDispatcher,
 		DrawableMessageHandler,
 		std::variant<
-			screws::ECS_Entity<player_tag, component_t>,
-			screws::ECS_Entity<enemy_tag, component_t>>,
+			screws::ECS_Entity<player_tag, component_t, std::variant<
+		screws::ECS_Message<componentAdded_tag>,
+		screws::ECS_Message<componentRemoved_tag>,
+		screws::ECS_Message<entityAdded_tag>,
+		screws::ECS_Message<entityRemoved_tag>,
+		screws::ECS_Message<systemAdded_tag>,
+		screws::ECS_Message<systemRemoved_tag>>>,
+			screws::ECS_Entity<enemy_tag, component_t, std::variant<
+		screws::ECS_Message<componentAdded_tag>,
+		screws::ECS_Message<componentRemoved_tag>,
+		screws::ECS_Message<entityAdded_tag>,
+		screws::ECS_Message<entityRemoved_tag>,
+		screws::ECS_Message<systemAdded_tag>,
+		screws::ECS_Message<systemRemoved_tag>>>>,
 		std::variant<
 			screws::ECS_Message<componentAdded_tag>,
 			screws::ECS_Message<componentRemoved_tag>,
@@ -268,8 +361,20 @@ using system_t = std::variant<
 		MovableDispatcher, 
 		MovableMessageHandler, 
 		std::variant<
-		screws::ECS_Entity<player_tag, component_t>,
-		screws::ECS_Entity<enemy_tag, component_t>>, 
+		screws::ECS_Entity<player_tag, component_t, std::variant<
+	screws::ECS_Message<componentAdded_tag>,
+	screws::ECS_Message<componentRemoved_tag>,
+	screws::ECS_Message<entityAdded_tag>,
+	screws::ECS_Message<entityRemoved_tag>,
+	screws::ECS_Message<systemAdded_tag>,
+	screws::ECS_Message<systemRemoved_tag>>>,
+		screws::ECS_Entity<enemy_tag, component_t, std::variant<
+	screws::ECS_Message<componentAdded_tag>,
+	screws::ECS_Message<componentRemoved_tag>,
+	screws::ECS_Message<entityAdded_tag>,
+	screws::ECS_Message<entityRemoved_tag>,
+	screws::ECS_Message<systemAdded_tag>,
+	screws::ECS_Message<systemRemoved_tag>>>>,
 		std::variant<
 		screws::ECS_Message<componentAdded_tag>,
 		screws::ECS_Message<componentRemoved_tag>,
@@ -282,8 +387,20 @@ using system_t = std::variant<
 			DrawableDispatcher, 
 			DrawableMessageHandler, 
 			std::variant<
-				screws::ECS_Entity<player_tag, component_t>,
-				screws::ECS_Entity<enemy_tag, component_t>>, 
+				screws::ECS_Entity<player_tag, component_t, std::variant<
+					screws::ECS_Message<componentAdded_tag>,
+					screws::ECS_Message<componentRemoved_tag>,
+					screws::ECS_Message<entityAdded_tag>,
+					screws::ECS_Message<entityRemoved_tag>,
+					screws::ECS_Message<systemAdded_tag>,
+					screws::ECS_Message<systemRemoved_tag>>>,
+				screws::ECS_Entity<enemy_tag, component_t, std::variant<
+					screws::ECS_Message<componentAdded_tag>,
+					screws::ECS_Message<componentRemoved_tag>,
+					screws::ECS_Message<entityAdded_tag>,
+					screws::ECS_Message<entityRemoved_tag>,
+					screws::ECS_Message<systemAdded_tag>,
+					screws::ECS_Message<systemRemoved_tag>>>>,
 			std::variant<
 				screws::ECS_Message<componentAdded_tag>,
 				screws::ECS_Message<componentRemoved_tag>,
@@ -364,10 +481,6 @@ struct VerifyComponents
 	{
 		return _entity.has_all_components<ComponentList...>();
 	}
-	bool operator()( const std::monostate& _entity )
-	{
-		return false;
-	}
 };
 
 class WorldDispatcher
@@ -419,8 +532,20 @@ using world_t = std::variant<
 			MovableDispatcher,
 			MovableMessageHandler,
 			std::variant<
-				screws::ECS_Entity<player_tag, component_t>,
-				screws::ECS_Entity<enemy_tag, component_t>>,
+				screws::ECS_Entity<player_tag, component_t, std::variant<
+					screws::ECS_Message<componentAdded_tag>,
+					screws::ECS_Message<componentRemoved_tag>,
+					screws::ECS_Message<entityAdded_tag>,
+					screws::ECS_Message<entityRemoved_tag>,
+					screws::ECS_Message<systemAdded_tag>,
+					screws::ECS_Message<systemRemoved_tag>>>,
+				screws::ECS_Entity<enemy_tag, component_t, std::variant<
+					screws::ECS_Message<componentAdded_tag>,
+					screws::ECS_Message<componentRemoved_tag>,
+					screws::ECS_Message<entityAdded_tag>,
+					screws::ECS_Message<entityRemoved_tag>,
+					screws::ECS_Message<systemAdded_tag>,
+					screws::ECS_Message<systemRemoved_tag>>>>,
 			std::variant<
 				screws::ECS_Message<componentAdded_tag>,
 				screws::ECS_Message<componentRemoved_tag>,
@@ -433,8 +558,20 @@ using world_t = std::variant<
 			DrawableDispatcher,
 			DrawableMessageHandler,
 			std::variant<
-				screws::ECS_Entity<player_tag, component_t>,
-				screws::ECS_Entity<enemy_tag, component_t>>,
+				screws::ECS_Entity<player_tag, component_t, std::variant<
+					screws::ECS_Message<componentAdded_tag>,
+					screws::ECS_Message<componentRemoved_tag>,
+					screws::ECS_Message<entityAdded_tag>,
+					screws::ECS_Message<entityRemoved_tag>,
+					screws::ECS_Message<systemAdded_tag>,
+					screws::ECS_Message<systemRemoved_tag>>>,
+				screws::ECS_Entity<enemy_tag, component_t, std::variant<
+					screws::ECS_Message<componentAdded_tag>,
+					screws::ECS_Message<componentRemoved_tag>,
+					screws::ECS_Message<entityAdded_tag>,
+					screws::ECS_Message<entityRemoved_tag>,
+					screws::ECS_Message<systemAdded_tag>,
+					screws::ECS_Message<systemRemoved_tag>>>>,
 			std::variant<
 				screws::ECS_Message<componentAdded_tag>,
 				screws::ECS_Message<componentRemoved_tag>,
@@ -457,8 +594,6 @@ using Factory = screws::ECS_Factory<
 	component_t,
 	entity_t,
 	message_t,
-	receiver_t,
-	sender_t,
 	system_t,
 	world_t>;
 

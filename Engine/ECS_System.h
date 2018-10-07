@@ -18,6 +18,7 @@ namespace screws
 	{
 	public:
 		using entity_resource = shared_resource<EntityVariant>;
+
 		using iterator = typename std::vector<entity_resource>::iterator;
 		using const_iterator = typename std::vector<entity_resource>::const_iterator;
 
@@ -59,6 +60,12 @@ namespace screws
 			return find_if( entities, is_same_resource<entity_resource>( _entity ) );
 		}
 
+		void set_mailbox( shared_resource<ECS_Receiver<MessageVariant>> _receiver,
+			shared_resource<ECS_Sender<MessageVariant>> _sender )
+		{
+			this->receiver = _receiver;
+			this->sender = _sender;
+		}
 	private:
 		void process_messages( MessageDispatch& _visitor )
 		{

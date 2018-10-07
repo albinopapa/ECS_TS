@@ -179,160 +179,144 @@ private:
 	std::vector<storage> container;
 };
 
+template<typename Type> class shared_pool;
+
+class ref_counter
+{
+public:
+	ref_counter() = default;
+	ref_counter( int _new_count ):count( _new_count ){}
+
+	void inc() { ++count; }
+	void dec() { --count; }
+	int ref_count()const { return count; }
+
+private:
+	int count = 0;
+};
+
+template<typename Type>
+class resource
+{
+public:
+public:
+	resource() = default;
+	resource( const resource& _other )
+		:
+		guardian( _other.guardian ),
+		ptr( _other.ptr ),
+		counter( _other.counter )
+	{
+		counter->inc();
+		ptr = _other.ptr;
+	}
+	resource( resource&& _other )
+		:
+		guardian( _other.guardian ),
+		counter( _other.counter ),
+		ptr( _other.ptr )
+	{
+		_other.counter = nullptr;
+		_other.ptr = nullptr;
+		_other.guardian = nullptr;
+	}
+	resource( shared_pool<Type>& _guardian, Type* _other, ref_counter* _counter )
+		:
+		guardian( std::addressof( _guardian ) ),
+		counter( _counter ),
+		ptr( _other )
+	{
+		counter->inc();
+	}
+	~resource()
+	{
+		if( counter )
+			counter->dec();
+	}
+
+	resource& operator=( const resource& _other )
+	{
+		if( std::addressof( _other ) != this )
+		{
+			*this = resource( _other );
+		}
+
+		return *this;
+	}
+	resource& operator=( resource&& _other )
+	{
+		if( this != std::addressof( _other ) )
+		{
+			( *this ).~resource();
+
+			counter = _other.counter;
+			ptr = _other.ptr;
+			guardian = _other.guardian;
+
+			_other.counter = nullptr;
+			_other.ptr = nullptr;
+			_other.guardian = nullptr;
+		}
+
+		return *this;
+	}
+
+	Type& operator*()
+	{
+		return *ptr;
+	}
+	const Type& operator*()const
+	{
+		return *ptr;
+	}
+
+	Type* operator->()
+	{
+		return ptr;
+	}
+	const Type* operator->()const
+	{
+		return ptr;
+	}
+
+	operator bool()const
+	{
+		return ptr != nullptr;
+	}
+
+	bool operator==( const resource& _other )const
+	{
+		return ptr == _other.ptr;
+	}
+	bool operator!=( const resource& _other )const
+	{
+		return !( ( *this ) == _other );
+	}
+
+	Type* get()
+	{
+		return ptr;
+	}
+	const Type* get()const
+	{
+		return ptr;
+	}
+
+	int ref_count()const
+	{
+		return counter->ref_count();
+	}
+private:
+	mutable ref_counter* counter = nullptr;
+	Type* ptr = nullptr;
+	shared_pool<Type>* guardian = nullptr;
+	friend shared_pool<Type>;
+};
 
 template<typename Type>
 class shared_pool
 {
 public:
-	class resource
-	{
-		class ref_counter
-		{
-		public:
-			ref_counter( int _new_count )
-				:
-				count( _new_count )
-			{
-			}
-
-			void inc() { ++count; }
-			void dec() { --count; }
-			int ref_count()const { return count; }
-
-		private:
-			int count = 0;
-		};
-	public:
-		resource() = default;
-		resource( const resource& _other )
-			:
-			guardian( _other.guardian ),
-			ptr( new Type* )
-		{
-			counter = _other.counter;
-			counter->inc();
-			( *ptr ) = ( *_other.ptr );
-		}
-		resource( resource&& _other )
-			:
-			guardian( _other.guardian ),
-			counter( _other.counter ),
-			ptr( _other.ptr )
-		{
-			_other.counter = nullptr;
-			_other.ptr = nullptr;
-			_other.guardian = nullptr;
-		}
-		resource( shared_pool<Type>& _guardian, Type* _other )
-			:
-			guardian( std::addressof( _guardian ) ),
-			counter( new ref_counter( 1 ) ),
-			ptr( new Type* )
-		{
-			*ptr = _other;
-		}
-		~resource()
-		{
-			if( !counter )return;
-
-			counter->dec();
-			if( counter->ref_count() <= 0 )
-			{
-				auto* elem_pointer = *ptr;
-				if( counter )
-				{
-					delete counter;
-					counter = nullptr;
-				}
-				if( ptr )
-				{
-					delete ptr;
-					ptr = nullptr;
-				}
-				guardian->on_backer_release( 
-					random_access_iterator<shared_pool<Type>>( guardian, elem_pointer ) 
-				);
-			}
-		}
-
-		resource& operator=( const resource& _other )
-		{
-			if( std::addressof( _other ) != this )
-			{
-				*this = resource( _other );
-			}
-
-			return *this;
-		}
-		resource& operator=( resource&& _other )
-		{
-			if( this != std::addressof( _other ) )
-			{
-				( *this ).~resource();
-				counter = _other.counter;
-				ptr = _other.ptr;
-				guardian = _other.guardian;
-
-				_other.counter = nullptr;
-				_other.ptr = nullptr;
-				_other.guardian = nullptr;
-			}
-
-			return *this;
-		}
-
-		Type& operator*()
-		{
-			return **ptr;
-		}
-		const Type& operator*()const
-		{
-			return **ptr;
-		}
-
-		Type* operator->()
-		{
-			return *ptr;
-		}
-		const Type* operator->()const
-		{
-			return *ptr;
-		}
-
-		operator bool()const
-		{
-			return ptr != nullptr && ( *ptr ) != nullptr;
-		}
-
-		bool operator==( const resource& _other )const
-		{
-			return *ptr == *_other.ptr;
-		}
-		bool operator!=( const resource& _other )const
-		{
-			return !( ( *this ) == _other );
-		}
-
-		Type* get()
-		{
-			return *ptr;
-		}
-		const Type* get()const
-		{
-			return *ptr;
-		}
-
-		int ref_count()const
-		{
-			return counter->ref_count();
-		}
-	private:
-		mutable ref_counter* counter = nullptr;
-		Type** ptr = nullptr;
-		shared_pool<Type>* guardian;
-		friend shared_pool<Type>;
-	};
-
 public:
 	using iterator = random_access_iterator<shared_pool<Type>>;
 	using const_iterator = const_random_access_iterator<shared_pool<Type>>;
@@ -346,14 +330,19 @@ public:
 	shared_pool() = default;
 	shared_pool( size_t _count )
 		:
-		container( std::make_unique<Type[]>( _count ) ),
+		container( _count ),
+		counters( _count, ref_counter( 0 ) ),
 		backer( _count ),
 		count( _count ),
 		cap( _count )
 	{
 		for( size_t i = 0; i < _count; ++i )
 		{
-			backer[ i ] = resource( *this, &container[ i ] );
+			backer[ i ] = resource(
+					*this,
+					std::addressof( container[ i ] ),
+					std::addressof( counters[ i ] ) 
+				);
 		}
 	}
 	shared_pool( shared_pool&& _other )
@@ -361,23 +350,11 @@ public:
 		count( _other.count ),
 		cap( _other.cap ),
 		container( std::move( _other.container ) ),
-		backer( std::move( _other.backer ) )
+		backer( std::move( _other.backer ) ),
+		counters( std::move( _other.counters ) )
 	{
-	}
-	~shared_pool()
-	{
-		if( container )
-		{
-			for( int i = 0; i < count; ++i )
-			{
-				while( backer[ i ] )
-				{
-					backer[ i ].~resource();
-				}
-			}
-			backer.clear();
-		}
-		container.reset();
+		_other.count = 0;
+		_other.cap = 0;
 	}
 
 	shared_pool( const shared_pool& ) = delete;
@@ -386,14 +363,22 @@ public:
 	{
 		if( this != std::addressof( _other ) )
 		{
-			for( int i = 0; i < size(); ++i )
-			{
-				backer[ i ].~resource();
-			}
-			container = std::move( _other.container );
-			backer = std::move( _other.backer );
 			count = _other.count;
 			cap = _other.cap;
+			container = std::move( _other.container );
+			backer = std::move( _other.backer );
+			counters = std::move( _other.counters );
+			
+			int counter = 0;
+			for( auto& element : backer )
+			{
+				element = resource(
+					*this,
+					std::addressof( container[ counter ] ),
+					std::addressof( counters[ counter ] )
+				);
+				++counter;
+			}
 
 			_other.count = 0;
 			_other.cap = 0;
@@ -405,83 +390,106 @@ public:
 	// Iteration
 	iterator begin()
 	{
-		return random_access_iterator{ this, container.get() };
+		return random_access_iterator{ this, container.data() };
 	}
 	iterator end()
 	{
-		return random_access_iterator{ this, container.get() + size() };
+		return random_access_iterator{ this, container.data() + size() };
 	}
 	const_iterator begin()const
 	{
-		return const_random_access_iterator{ this, container.get() };
+		return const_random_access_iterator{ this, container.data() };
 	}
 	const_iterator end()const
 	{
-		return const_random_access_iterator{ this, container.get() + size() };
+		return const_random_access_iterator{ this, container.data() + size() };
 	}
 	const_iterator cbegin()const
 	{
-		return const_random_access_iterator{ this, container.get() };
+		return const_random_access_iterator{ this, container.data() };
 	}
 	const_iterator cend()const
 	{
-		return const_random_access_iterator{ this, container.get() + size() };
+		return const_random_access_iterator{ this, container.data() + size() };
 	}
 
 	// Accessors
-	resource& operator[]( size_t _index )
+	resource<Type>& operator[]( size_t _index )
 	{
 		return backer[ _index ];
 	}
-	const resource& operator[]( size_t _index )const
+	const resource<Type>& operator[]( size_t _index )const
 	{
 		return backer[ _index ];
 	}
-	resource& front() 
+	resource<Type>& front()
 	{ 
 		return backer[ 0 ]; 
 	}
-	resource& back() 
+	resource<Type>& back()
 	{ 
 		return backer[ count - 1 ]; 
 	}
-	const resource& front()const 
+	const resource<Type>& front()const
 	{ 
 		return backer[ 0 ]; 
 	}
-	const resource& back()const 
+	const resource<Type>& back()const
 	{ 
 		return backer[ count - 1 ]; 
 	}
 
 	// Insertions
-	void push_back( const Type& t ) 
+	template<typename...Args>
+	resource<Type>& emplace_back( Args&&... _args )
 	{
-		const int temp = count + 1;
-		if( temp >= cap )
+		Finally do_last( [ & ] { ++count; } );
+		if( will_reallocate( size() + 1 ) )
 		{
 			reserve( calculate_growth() );
 		}
-		if( temp < cap )
+
+		auto& result = container.emplace_back( Type( std::forward<Args>( _args )... ) );
+		backer[ count ] = resource<Type>(
+			*this,
+			std::addressof( container[ count ] ),
+			std::addressof( counters[ count ] )
+		);
+		return backer[ count ];
+	}
+	void push_back( const Type& t ) 
+	{
+		Finally do_last( [ & ] { ++count; } );
+		if( will_reallocate( size() + 1 ) )
 		{
-			container[ count ] = t;
-			backer[ count ] = resource( *this, std::addressof( container[ count ] ) );
-			count = temp;
+			reserve( calculate_growth() );
 		}
+
+		container[ count ] = t;
+		backer[ count ] = resource(
+			*this,
+			std::addressof( container[ count ] ),
+			std::addressof( counters[ count ] )
+		);
 	}
 	void push_back( Type&& t )
 	{
-		const size_t temp = count + 1;
-		if( temp >= cap )
+		Finally do_last( [ & ] { ++count; } );
+		if( will_reallocate( size() + 1 ) )
 		{
 			reserve( calculate_growth() );
 		}
 
-		container[ count ] = std::move( t );
-		backer[ count ] = resource( *this, std::addressof( container[ count ] ) );
-		count = temp;
-	}
+		container.push_back( std::move( t ) );
+		counters.push_back( ref_counter() );
+		backer.push_back( resource(
+			*this,
+			std::addressof( container[ count ] ),
+			std::addressof( counters[ count ] )
+		) );
 
+
+	}
 
 	// Querys
 	size_t size()const noexcept { return count; }
@@ -491,22 +499,31 @@ public:
 	// Erasure
 	void pop_back()
 	{
-		if( empty() )return;
-		checked_erase( count - 1 );
+		erase( end() - 1 );
 	}
 	iterator erase( iterator _where )
 	{
 		const std::ptrdiff_t offset = _where - begin();
 
-		if( empty() ||
-			( ( offset <= 0 ) && ( offset >= std::ptrdiff_t( size() ) ) ) )
+		if( ( empty() ) ||
+			( offset <= 0 ) ||
+			( offset >= std::ptrdiff_t( size() ) ) )
 		{
 			return end();
 		}
 
-		return checked_erase( offset );
+		backer[ offset ].~resource();
+
+		return ( offset > size() ) ? end() : begin() + offset;
+	}
+	void clear()
+	{
+		backer.clear();
+		counters.clear();
+		container.clear();
 	}
 
+	// Resizing
 	void reserve( size_t _new_size )
 	{
 		if( _new_size < cap )
@@ -514,11 +531,11 @@ public:
 			return;
 		}
 
-		container = grow_new_container( _new_size );
 
-		reassign_backers( container );
-
-		backer = grow_new_backer( _new_size );
+		container = grow_container( container, _new_size );
+		counters = grow_container( counters, _new_size );
+		backer = grow_container( backer, _new_size );
+		reassign_backers();
 
 		cap = _new_size;
 	}
@@ -533,92 +550,65 @@ public:
 		const int old_size = size();
 		count = _new_size;
 
-		std::fill( container.get() + old_size, container.get() + size(), Type() );
+		std::fill( container.begin() + old_size, container.begin() + size(), Type() );
 
 		int count = old_size;
 		std::for_each( backer.begin() + old_size, backer.end(),
-			[ & ]( resource& _res )
+			[ & ]( resource<Type>& _res )
 			{
-				_res = resource( *this, &container[ count++ ] );
+				Finally do_last( [ & ] { ++count; } );
+				_res = resource(
+					*this,
+					std::addressof( container[ count ] ),
+					std::addressof( counters[ count ] )
+				);
 			} );
 	}
 
 private:
-	iterator checked_erase( size_t _offset )
+	bool will_reallocate(size_t _new_size)const noexcept
 	{
-		release_backer( _offset );
-		
-		if( _offset > size() ) return end();
-
-		return begin() + _offset;
+		return _new_size > cap;
 	}
-	void release_backer( size_t _offset )
-	{
-		auto& res = backer[ _offset ];
-		res.~resource();
-	}
-	void on_backer_release( iterator& _where )
-	{
-		const std::ptrdiff_t offset = _where - begin();
-
-		auto& old_back = back();
-		auto& new_back = backer[ offset ];
-		if( offset < std::ptrdiff_t( count - 1 ) )
-		{
-			std::swap( container[ offset ], cont_back() );
-			std::swap( old_back, new_back );
-			*new_back.ptr = &container[ offset ];
-		}
-
-		cont_back().~Type();
-		backer.pop_back();
-		--count;
-	}
-
 	size_t calculate_growth()const noexcept
 	{
 		return cap == 0 ? 10 : cap * 3 / 2;
 	}
-	Type& cont_back()
-	{
-		return container[ size() - 1 ];
-	}
 
-	std::unique_ptr<Type[]> grow_new_container( size_t _new_size )
+	template<typename VecType>
+	std::vector<VecType> grow_container( std::vector<VecType>& vec, size_t _new_size )
 	{
-		auto t_container = std::make_unique<Type[]>( _new_size );
-		std::copy(
-			std::move_iterator( container.get() ),
-			std::move_iterator( container.get() + size() ),
-			t_container.get() );
-
-		return t_container;
-	}
-	void reassign_backers( const std::unique_ptr<Type[]>& _new_container )
-	{
-		for( int i = 0; i < size(); ++i )
+		std::vector<VecType> t_vector;
+		t_vector.reserve( _new_size );
+		for( size_t i = 0; i < count; ++i )
 		{
-			backer[ i ] = resource( *this, &_new_container[ i ] );
+			t_vector[ i ] = std::move( vec[ i ] );
+		}
+
+		return t_vector;
+	}
+	void reassign_backers()
+	{
+		int counter = 0;
+		for( auto& element : backer )
+		{
+			Finally do_last( [ & ] { ++counter; } );
+			element = resource(
+				*this,
+				std::addressof( container[ counter ] ),
+				std::addressof( counters[ counter ] )
+			);
 		}
 	}
-	std::vector<resource> grow_new_backer( size_t _new_size )
-	{
-		std::vector<resource> t_backer = std::vector<resource>( _new_size );
-		std::copy(
-			std::move_iterator( backer.begin() ),
-			std::move_iterator( backer.end() ),
-			t_backer.begin() );
-
-		return t_backer;
-	}
 private:
-	std::unique_ptr<Type[]> container;
-	std::vector<resource> backer;
+	std::vector<Type> container;
+	std::vector<ref_counter> counters;
+	std::vector<resource<Type>> backer;
 	size_t count = 0, cap = 0;
 };
 
 template<typename T>
-using shared_resource = typename shared_pool<T>::resource;
+using shared_resource = typename resource<T>;
 
 template<typename ResourceType>
 struct is_same_resource
@@ -630,6 +620,7 @@ struct is_same_resource
 	}
 	const ResourceType& left;
 };
+
 template<typename ResourceType>is_same_resource( ResourceType )->
 is_same_resource<ResourceType>;
 

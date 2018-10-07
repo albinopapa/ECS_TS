@@ -424,7 +424,10 @@ void Graphics::FillCircle( const Circle& _circle, Color _color )
 			const auto sqDist = chili::sq( x ) + chili::sq( y );
 			if( sqDist < sqRad )
 			{
-				PutPixel( int( x ), int( y ), _color );
+				PutPixel( 
+					int( x + _circle.center.x ), 
+					int( y + _circle.center.y ), 
+					_color );
 			}
 		}
 	}

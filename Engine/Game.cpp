@@ -22,57 +22,57 @@
 #include "ChiliMath.h"
 #include "FrameTimer.h"
 #include "Game.h"
+#include "Aliases.h"
 #include <cassert>
 
+#include <memory>
+void fn()
+{
+	auto t = std::make_shared<int>( 32 );
+
+}
 
 Game::Game( MainWindow& wnd )
 	:
 	wnd( wnd ),
 	gfx( wnd ),
-	vworld( g_factory.create_world<screws::ECS_World<system_t,message_t,WorldMessageFilter>>() )
+	vworld( g_factory.create_world<World>() )
 {
-	auto& world = std::get<screws::ECS_World<system_t, message_t, WorldMessageFilter>>( *vworld );
+	fn();
+	auto position = g_factory.create_component<Position>( 400.f, 300.f );
+	auto velocity = g_factory.create_component<Velocity>( 0.f, 0.f );
+	auto shape = g_factory.create_component<Shape>( Circle{ {0.f,0.f}, 20.f }, Colors::Blue );
 	
-	shared_resource<system_t> vmovable = 
-		g_factory.create_system<screws::ECS_System<
-		MovableDispatcher, 
-		MovableMessageHandler, 
-		entity_t, 
-		message_t, 
-		SystemMessageFilter>>();
+	auto vball = g_factory.create_entity<Player>( position, velocity, shape );
+	auto& ball = std::get<Player>( *vball );
+	ball.set_mailbox( g_factory.create_receiver(), g_factory.create_sender() );
 
-	screws::ECS_System<
-		MovableDispatcher,
-		MovableMessageHandler,
-		entity_t,
-		message_t,
-		SystemMessageFilter>& movable = 
-			std::get<screws::ECS_System<
-				MovableDispatcher,
-				MovableMessageHandler,
-				entity_t,
-				message_t,
-				SystemMessageFilter>>( *vmovable );
+	auto vmovable = g_factory.create_system<Movable>();
+	Movable& movable = std::get<Movable>( *vmovable );
+	movable.set_mailbox( g_factory.create_receiver(), g_factory.create_sender() );
+	movable.add_entity( vball );
+	ball.add_receiver( movable.get_receiver() );
 
-	
+	auto vdrawable = g_factory.create_system<Drawable>();
+	Drawable& drawable = std::get<Drawable>( *vdrawable );
+	drawable.set_mailbox( g_factory.create_receiver(), g_factory.create_sender() );
+	drawable.add_entity( vball );
+	ball.add_receiver( drawable.get_receiver() );
+
+	auto& world = std::get<World>( *vworld );
+	world.set_mailbox( g_factory.create_receiver(), g_factory.create_sender() );
 	world.add_receiver( movable.get_receiver() );
-	
-	auto position = 
-		g_factory.create_component<screws::ECS_Component<position_tag>>( 400.f, 300.f );
-	auto velocity = 
-		g_factory.create_component<screws::ECS_Component<velocity_tag>>( 0.f, 0.f );
-	auto shape =
-		g_factory.create_component<screws::ECS_Component<shape_tag>>( Circle{ {0.f,0.f}, 20.f }, Colors::Blue );
-	auto ball =
-		g_factory.create_entity<screws::ECS_Entity<player_tag, component_t>>(
-			position,
-			velocity,
-			shape );
-
-	movable.add_entity( ball );
-
+	world.add_receiver( drawable.get_receiver() );
 	world.add_system( vmovable );
-	int a = 0;
+	world.add_system( vdrawable );
+	
+	ball.remove_component<Velocity>();
+	ball.send_message<ComponentRemoved>( vball );
+}
+
+Game::~Game()
+{
+	g_factory.release_all();
 }
 
 void Game::Go()
@@ -85,15 +85,7 @@ void Game::Go()
 
 void Game::UpdateModel()
 {
-	auto& v_world = *vworld;
-	screws::ECS_World<
-		system_t,
-		message_t,
-		WorldMessageFilter>& world = std::get<screws::ECS_World<
-		system_t,
-		message_t,
-		WorldMessageFilter>>( v_world );
-
+	World& world = std::get<World>( *vworld );
 	world.tick( WorldDispatcher( .016f, gfx ) );
 }
 
