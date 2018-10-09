@@ -76,7 +76,8 @@ namespace screws
 				std::visit( _visitor, result.value() );
 			}
 		}
-
+		friend ExecuteDispatch;
+		friend MessageDispatch;
 	protected:
 		std::vector<entity_resource> entities;
 	};

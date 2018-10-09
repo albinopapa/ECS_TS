@@ -4,7 +4,6 @@
 #include "ECS_Utilities.h"
 #include <vector>
 
-
 namespace screws
 {
 	template<

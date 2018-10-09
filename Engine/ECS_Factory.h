@@ -45,7 +45,29 @@ namespace screws
 			auto result = entity_pool.back();
 			return result;
 		}
-
+		template<typename EntityType>
+		shared_resource<entity_t> find_entity( EntityType& _entity )
+		{
+			for( size_t i = 0; i < entity_pool.size(); ++i )
+			{
+				if( std::visit( [ & ]( auto& ent )
+					{	
+						using type = std::decay_t<decltype( ent )>;
+						if constexpr( std::is_same_v<type, EntityType> )
+						{
+							return &_entity == &ent;
+						}
+						return false;
+					}, *entity_pool[ i ] ) )
+				{
+					return entity_pool[ i ];
+				}
+				else
+				{
+					return shared_resource<entity_t>();
+				}
+			}
+		}
 		template<typename ComponentType, typename...Args>
 		shared_resource<component_t> create_component( Args&&... _args )
 		{

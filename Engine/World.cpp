@@ -1,31 +1,35 @@
 #include "World.h"
 #include "Graphics.h"
-#include "Includes.h"
+#include "Keyboard.h"
+#include "SystemDrawable.h"
+#include "SystemMovable.h"
+#include "SystemCollidable.h"
+#include "SystemControllable.h"
 
-
-WorldDispatcher::WorldDispatcher( float _dt, Graphics & _graphics )
+WorldDispatcher::WorldDispatcher( float _dt, Graphics & _graphics, Keyboard& _keyboard )
 	:
 	dt( _dt ),
-	gfx( _graphics )
+	gfx( _graphics ),
+	kbd( _keyboard )
 {
 }
 
-void WorldDispatcher::operator()( screws::ECS_System<
-	MovableDispatcher,
-	MovableMessageHandler,
-	entity_t,
-	message_t,
-	SystemMessageFilter>& _system )
+void WorldDispatcher::operator()( Movable& _system )
 {
-	_system.execute( MovableMessageHandler( _system ), MovableDispatcher( dt ) );
+	_system.execute( MovableMessageDispatcher( _system ), MovableExecuteDispatcher( dt ) );
 }
 
-void WorldDispatcher::operator()( screws::ECS_System<
-	DrawableDispatcher,
-	DrawableMessageHandler,
-	entity_t,
-	message_t,
-	SystemMessageFilter>& _system ) const
+void WorldDispatcher::operator()( Drawable& _system ) const
 {
-	_system.execute( DrawableMessageHandler(_system), DrawableDispatcher( gfx ) );
+	_system.execute( DrawableMessageDispatcher( _system ), DrawableExecuteDispatcher( gfx ) );
+}
+
+void WorldDispatcher::operator()( Collidable& _system )
+{
+	_system.execute( CollidableMessageDispatch( _system ), CollidableExecuteDispatch( _system ) );
+}
+
+void WorldDispatcher::operator()( Controllable& _system )
+{
+	_system.execute( ControllableMessageDispatch( _system ), ControllableExecuteDispatch( _system, kbd ) );
 }

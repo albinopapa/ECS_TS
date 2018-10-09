@@ -20,25 +20,21 @@
  ******************************************************************************************/
 #include "MainWindow.h"
 #include "ChiliMath.h"
+#include "Component.h"
 #include "FrameTimer.h"
 #include "Game.h"
-#include "Aliases.h"
+#include "Message.h"
+#include "World.h"
 #include <cassert>
-
 #include <memory>
-void fn()
-{
-	auto t = std::make_shared<int>( 32 );
-
-}
 
 Game::Game( MainWindow& wnd )
 	:
 	wnd( wnd ),
 	gfx( wnd ),
-	vworld( g_factory.create_world<World>() )
+	vworld( g_factory.create_world<World>() ),
+	key_event_messanger( g_factory.create_sender() )
 {
-	fn();
 	auto position = g_factory.create_component<Position>( 400.f, 300.f );
 	auto velocity = g_factory.create_component<Velocity>( 0.f, 0.f );
 	auto shape = g_factory.create_component<Shape>( Circle{ {0.f,0.f}, 20.f }, Colors::Blue );
@@ -59,15 +55,22 @@ Game::Game( MainWindow& wnd )
 	drawable.add_entity( vball );
 	ball.add_receiver( drawable.get_receiver() );
 
+	auto vcontrollable = g_factory.create_system<Controllable>();
+	Controllable& controllable = std::get<Controllable>( *vcontrollable );
+	controllable.set_mailbox( g_factory.create_receiver(), g_factory.create_sender() );
+	controllable.add_entity( vball );
+	controllable.add_receiver( controllable.get_receiver() );
+
 	auto& world = std::get<World>( *vworld );
 	world.set_mailbox( g_factory.create_receiver(), g_factory.create_sender() );
 	world.add_receiver( movable.get_receiver() );
 	world.add_receiver( drawable.get_receiver() );
+	world.add_receiver( controllable.get_receiver() );
 	world.add_system( vmovable );
 	world.add_system( vdrawable );
+	world.add_system( vcontrollable );
 	
-	ball.remove_component<Velocity>();
-	ball.send_message<ComponentRemoved>( vball );
+	//key_event_messanger->add_receiver( ball.get_receiver() );
 }
 
 Game::~Game()
@@ -79,14 +82,14 @@ void Game::Go()
 {
 	gfx.BeginFrame();
 	UpdateModel();
-	ComposeFrame();
+	//ComposeFrame();
 	gfx.EndFrame();
 }
 
 void Game::UpdateModel()
 {
 	World& world = std::get<World>( *vworld );
-	world.tick( WorldDispatcher( .016f, gfx ) );
+	world.tick( WorldDispatcher( .016f, gfx, wnd.kbd ) );
 }
 
 void Game::ComposeFrame()

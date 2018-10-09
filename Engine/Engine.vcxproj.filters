@@ -141,18 +141,6 @@
     <ClInclude Include="SystemDrawable.h">
       <Filter>Header Files\Application</Filter>
     </ClInclude>
-    <ClInclude Include="DeclarationsComponent.h">
-      <Filter>Header Files\Application</Filter>
-    </ClInclude>
-    <ClInclude Include="DeclarationsEntity.h">
-      <Filter>Header Files\Application</Filter>
-    </ClInclude>
-    <ClInclude Include="DeclarationsSystem.h">
-      <Filter>Header Files\Application</Filter>
-    </ClInclude>
-    <ClInclude Include="DeclarationsMessage.h">
-      <Filter>Header Files\Application</Filter>
-    </ClInclude>
     <ClInclude Include="ECS_Screws.h">
       <Filter>Header Files\ECS</Filter>
     </ClInclude>
@@ -165,7 +153,13 @@
     <ClInclude Include="ECS_Message.h">
       <Filter>Header Files\ECS</Filter>
     </ClInclude>
-    <ClInclude Include="Aliases.h">
+    <ClInclude Include="SystemCollidable.h">
+      <Filter>Header Files\Application</Filter>
+    </ClInclude>
+    <ClInclude Include="SystemControllable.h">
+      <Filter>Header Files\Application</Filter>
+    </ClInclude>
+    <ClInclude Include="SystemMessageDispatchBase.h">
       <Filter>Header Files\Application</Filter>
     </ClInclude>
   </ItemGroup>
@@ -213,6 +207,12 @@
       <Filter>Source Files\Application</Filter>
     </ClCompile>
     <ClCompile Include="SystemDrawable.cpp">
+      <Filter>Source Files\Application</Filter>
+    </ClCompile>
+    <ClCompile Include="SystemCollidable.cpp">
+      <Filter>Source Files\Application</Filter>
+    </ClCompile>
+    <ClCompile Include="SystemControllable.cpp">
       <Filter>Source Files\Application</Filter>
     </ClCompile>
   </ItemGroup>

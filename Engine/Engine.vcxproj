@@ -142,11 +142,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Aliases.h" />
-    <ClInclude Include="DeclarationsComponent.h" />
-    <ClInclude Include="DeclarationsEntity.h" />
-    <ClInclude Include="DeclarationsMessage.h" />
-    <ClInclude Include="DeclarationsSystem.h" />
     <ClInclude Include="ECS_Algorithms.h" />
     <ClInclude Include="ChiliException.h" />
     <ClInclude Include="ChiliMath.h" />
@@ -182,6 +177,9 @@
     <ClInclude Include="Shapes.h" />
     <ClInclude Include="Sound.h" />
     <ClInclude Include="SoundEffect.h" />
+    <ClInclude Include="SystemCollidable.h" />
+    <ClInclude Include="SystemControllable.h" />
+    <ClInclude Include="SystemMessageDispatchBase.h" />
     <ClInclude Include="SystemMovable.h" />
     <ClInclude Include="SystemDrawable.h" />
     <ClInclude Include="variant_helper.h" />
@@ -201,6 +199,8 @@
     <ClCompile Include="Message.cpp" />
     <ClCompile Include="Mouse.cpp" />
     <ClCompile Include="Sound.cpp" />
+    <ClCompile Include="SystemCollidable.cpp" />
+    <ClCompile Include="SystemControllable.cpp" />
     <ClCompile Include="SystemMovable.cpp" />
     <ClCompile Include="SystemDrawable.cpp" />
     <ClCompile Include="World.cpp" />

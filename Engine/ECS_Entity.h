@@ -5,6 +5,19 @@
 #include "ECS_Utilities.h"
 #include <optional>
 
+template<typename...ComponentList>
+struct VerifyComponents
+{
+	template<typename T>
+	auto operator()( const T& _entity )->
+		std::enable_if_t<!std::is_same_v<T, std::monostate>, bool>
+	{
+		return _entity.has_all_components<ComponentList...>();
+	}
+};
+template<typename...ComponentList> 
+VerifyComponents( ComponentList... )->VerifyComponents<ComponentList...>;
+
 namespace screws
 {
 	template<typename Tag, typename ComponentVariant, typename MessageVariant>

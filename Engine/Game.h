@@ -47,4 +47,5 @@ private:
 	/*  User Variables              */
 	/********************************/
 	shared_resource<world_t> vworld;
+	shared_resource<screws::ECS_Sender<message_t>> key_event_messanger;
 };
